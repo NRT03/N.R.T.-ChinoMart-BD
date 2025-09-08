@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>N.R.T. — Inventory</title>
+<link href="manifest.json" rel="manifest"/>
+<link href="icon-192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="icon-512x512.png" rel="icon" sizes="512x512" type="image/png"/>
+<meta content="#ffffff" name="theme-color"/>
+<style>
+:root{--bg:#f6f7fb;--card:#ffffff;--text:#0f172a;--muted:#64748b;--accent:#2563eb;--warn:#ef4444;--border:#e5e7eb;--shadow:0 10px 28px rgba(2,6,23,.08);--radius:14px;--maxw:1200px;--pad:18px;--lowbg:#fff7ed;--lowborder:#fed7aa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+.wrap{max-width:var(--maxw);margin:26px auto;padding:0 16px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:14px 16px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+h1{font-size:22px;margin:0}.sub{color:var(--muted);font-weight:500;font-size:13px}
+.btn{appearance:none;border:0;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);transition:transform .06s ease}
+.btn:active{transform:translateY(1px)} .btn.ghost{background:#eef2ff;color:#1e3a8a} .btn.gray{background:#e5e7eb;color:#111827} .btn.warn{background:#f59e0b;color:#fff}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--pad)}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat .label{color:var(--muted);font-weight:600;margin-bottom:8px}.stat .value{font-size:26px;font-weight:800;letter-spacing:.3px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+input[type=text],input[type=number],select{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;min-height:46px}
+/* Hide number input arrows globally */input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}
+.search{position:relative;flex:1;min-width:280px}.search input{width:100%;border:1.5px solid var(--border);border-radius:14px;padding:12px 44px;font-size:14px;transition:border .15s,box-shadow .15s}.search input:focus{outline:none;border-color:#c7d2fe;box-shadow:0 0 0 4px rgba(59,130,246,.1)}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%)}.kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;border:1px solid var(--border);padding:2px 6px;border-radius:6px;background:#f8fafc}
+.dropdown{position:absolute;left:0;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 40px rgba(2,6,23,.12);max-height:240px;overflow:auto;display:none;z-index:10}.dropdown.open{display:block}.opt{padding:10px 14px;cursor:pointer;font-weight:600}.opt:hover{background:#f8fafc}
+table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:12px}th{font-size:12px;text-align:left;color:#6b7280;font-weight:800;padding:0 8px}td{background:#fff;border:1px solid var(--border);padding:10px;border-radius:10px;vertical-align:middle}
+.right{text-align:right}.center{text-align:center}
+.qty{display:inline-flex;align-items:center;background:#f9fafb;border:1px solid var(--border);border-radius:10px;margin-inline:auto}
+.qty input{width:64px;border:0;background:transparent;text-align:center;padding:10px;appearance:textfield}
+.qty button{border:0;background:transparent;padding:8px 10px;cursor:pointer}
+.pill{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:6px 14px;background:#fff}.low{background:var(--lowbg)!important;border-color:var(--lowborder)!important}
+.muted{color:#94a3b8}
+.sticky-foot{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(255,255,255,.86),#fff);backdrop-filter:blur(8px);border-top:1px solid var(--border);padding:12px 16px;border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius);display:flex;gap:10px;align-items:center}
+@media (max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}}@media (max-width:640px){.grid-4{grid-template-columns:1fr}}
+.mini{font-size:12px;padding:8px 10px;border-radius:8px}
+
+.statuspill{min-width:70px;text-align:center;font-size:12px;font-weight:700;border:1px solid var(--border);border-radius:999px;padding:6px 14px;display:inline-block}
+.status-full{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.status-low{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+td.center input{ text-align:center !important; }
+
+.statuscell{ display:flex; justify-content:center; align-items:center; }
+
+.statuscell{ display:flex; justify-content:center; align-items:center; }
+.statuspill{ display:flex; justify-content:center; align-items:center; width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:10px; background:#f9fafb; }
+.status-full{background:#ecfdf5 !important;border-color:#a7f3d0 !important;color:#065f46 !important}
+.status-low{background:#fef2f2 !important;border-color:#fecaca !important;color:#991b1b !important}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+
+/* When row modal is open, keep table compact and prevent expanded columns from showing */
+html.modal-open #inventoryTable tr.expanded td:nth-child(4),
+html.modal-open #inventoryTable tr.expanded td:nth-child(5),
+html.modal-open #inventoryTable tr.expanded td:nth-child(6),
+html.modal-open #inventoryTable tr.expanded td:nth-child(8){
+  display: none !important;
+}
+html.modal-open #inventoryTable{ table-layout: fixed !important; }
+
+
+/* === Mobile modal-freeze rules (inserted) === */
+html.modal-open #inventoryTable tr.expanded td:nth-child(4),
+html.modal-open #inventoryTable tr.expanded td:nth-child(5),
+html.modal-open #inventoryTable tr.expanded td:nth-child(6),
+html.modal-open #inventoryTable tr.expanded td:nth-child(8){
+  display: none !important;
+}
+html.modal-open #inventoryTable{ table-layout: fixed !important; }
+
+</style>
+<style>
+/* === FINAL: Equal vertical spacing in Inventory (20px gaps) === */
+.wrap > .grid-4 { margin-bottom: 20px !important; }  /* gap after stats */
+.wrap > .card { margin-top: 20px !important; }       /* toolbar & table spacing */
+.wrap > .card + .card { margin-top: 20px !important; }/* ensure gap between cards */
+
+.wrap > .grid-4 { align-items: stretch !important; }
+.wrap > .grid-4 .card.stat {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+.card .toolbar { margin: 0 !important; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+<style>
+/* === Compact row height for Inventory table only === */
+#inventoryTable th, 
+#inventoryTable td {
+  padding: 6px 8px !important;
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+}
+
+/* Reduce input heights inside the inventory table */
+#inventoryTable input[type="number"],
+#inventoryTable input[type="text"],
+#inventoryTable select {
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  border-radius: 10px !important;
+}
+
+/* Compact the quantity control */
+#inventoryTable .qty {
+  padding: 0 !important;
+}
+#inventoryTable .qty input {
+  height: 34px !important;
+  padding: 6px !important;
+}
+#inventoryTable .qty button {
+  padding: 4px 8px !important;
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style>
+/* === CHG-009: Mobile simplified inventory table + row expand === */
+@media (max-width: 600px){
+  #inventoryTable th:nth-child(4),
+  #inventoryTable th:nth-child(5),
+  #inventoryTable th:nth-child(6),
+  #inventoryTable th:nth-child(8),
+  #inventoryTable td:nth-child(4),
+  #inventoryTable td:nth-child(5),
+  #inventoryTable td:nth-child(6),
+  #inventoryTable td:nth-child(8){
+    display: none !important;
+  }
+  #inventoryTable tr.expanded td:nth-child(4),
+  #inventoryTable tr.expanded td:nth-child(5),
+  #inventoryTable tr.expanded td:nth-child(6),
+  #inventoryTable tr.expanded td:nth-child(8){
+    display: table-cell !important;
+  }
+}
+/* Provide a subtle cue that rows are expandable on mobile */
+@media (max-width:600px){
+  #inventoryTable tbody tr{ cursor: pointer; }
+}
+/* ================================================================= */
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="nrt-shared-header-parity">
+/* Shared header layout + button parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so iOS/Android don’t baseline-shift them */
+.titlebar .title-actions .btn{ line-height:1; padding:10px 14px; margin:0; }
+@media (min-width:600px){ .titlebar{ min-height:64px; } } /* steady header height */
+/* Remove page-specific offsets */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+/* Global no-horizontal-scroll safeguards */
+html, body { max-width: 100%; overflow-x: hidden; }
+.wrap, .card, table { max-width: 100%; }
+table{ table-layout: auto; }
+img, canvas, svg, video{ max-width: 100%; height: auto; display: block; }
+[class*="titlebar"], .toolbar, .sticky-foot{ max-width:100%; overflow-x:hidden; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="nrt-header-parity-final">
+/* Shared header layout + parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so they don't sit low */
+.titlebar .title-actions .btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  line-height:1; padding:10px 16px; height:38px; border-radius:12px; margin:0;
+}
+/* Keep header height steady */
+@media (min-width:600px){ .titlebar{ min-height:64px; } }
+/* Nuke any legacy vertical offset */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="nrt-modal-polish-final">
+/* Modal polish (scoped to inventory modal) */
+#rowModal{ position:fixed; inset:0; display:none; place-items:center; background:rgba(2,6,23,.38); z-index:9999; }
+#rowModal .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; box-shadow:0 24px 60px rgba(2,6,23,.22); width:min(520px,92vw); padding:16px; }
+#rowModal .title{ font-weight:800; font-size:18px; margin-bottom:12px; }
+#rowModal .form-col{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+#rowModal label{ font-size:13px; color:#475569; }
+/* Match desktop/table inputs used in inventory */
+#rowModal input{ min-height:34px; padding:6px 10px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; color:#0f172a; width:100%; }
+#rowModal .actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
+/* Prevent page side-scroll while modal is open */
+html.modal-open, body.modal-open{ overflow:hidden; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="nrt-header-64">/* Unified header height and layout across pages */header{min-height:64px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;}header .row, header .title-actions .row{display:flex !important;gap:12px !important;align-items:center !important;flex-wrap:nowrap !important;}
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="pc-desktop-lock-1100">
+/* === Desktop: lock to original app width (approx like your screenshot) === */
+:root{ --app-desktop-maxw: 1100px; }  /* adjust to 1000–1200px if you prefer */
+
+@media (min-width: 1280px){
+  .wrap{
+    max-width: var(--app-desktop-maxw) !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* === Tables: keep header/body perfectly aligned ========================= */
+#itemsTable, #inventoryTable{
+  table-layout: fixed !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+#itemsTable th, #itemsTable td,
+#inventoryTable th, #inventoryTable td{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* optional helpers */
+.right{ text-align: right !important; }
+.center{ text-align: center !important; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style><style id="nrt-fixes-20250819">
+/* === Alignment & behavior fixes (2025-08-19) =========================== */
+/* Keep natural column sizing; action column compact */
+#itemsTable { table-layout: auto !important; }
+#itemsTable th:last-child, #itemsTable td:last-child { width: 1%; white-space: nowrap; }
+/* Center the Qty header and its column */
+#itemsTable thead th:nth-child(3){ text-align:center !important; }
+#itemsTable tbody td:nth-child(3){ text-align:center !important; }
+/* Make sure dropdowns can overlay */
+.dropdown{ z-index: 9999 !important; }
+.card{ overflow: visible !important; }
+/* ====================================================================== */
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+<style id="nrt-dropdown-portalizer-css">
+/* Ensure any dropdown can float above surrounding content */
+.dropdown{ z-index: 99999 !important; }
+.combo, .search, .section, .card, .wrap{ overflow: visible !important; }
+/* Prevent tables from clipping children */
+table, tbody, tr, td, th{ overflow: visible !important; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<style id="nrt-ios-toast-css">
+/* iOS-style top notification (like iPhone banners) */
+#nrt-ios-toast {
+  position: fixed;
+  left: 50%;
+  top: env(safe-area-inset-top, 8px);
+  transform: translateX(-50%) translateY(-120%);
+  min-width: min(520px, calc(100vw - 24px));
+  background: rgba(255,255,255,.98);
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(2,6,23,.18);
+  padding: 10px 14px;
+  z-index: 999999;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  transition: transform .32s cubic-bezier(.2,.9,.2,1);
+  font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Inter, Arial;
+}
+#nrt-ios-toast.show { transform: translateX(-50%) translateY(0); }
+#nrt-ios-toast .icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 900;
+  background: #eef2ff; color:#3730a3;
+}
+#nrt-ios-toast .text { display:flex; flex-direction:column; line-height:1.2; }
+#nrt-ios-toast .title { font-weight: 800; font-size: 14px; }
+#nrt-ios-toast .subtitle { font-size: 12px; color:#475569; margin-top:2px; }
+#nrt-ios-toast .tick {
+  width: 20px; height: 20px; border-radius: 999px; border:2px solid #10b981;
+  display:grid; place-items:center; font-size:12px; color:#10b981; font-weight:900;
+}
+@media (max-width: 480px){
+  #nrt-ios-toast { min-width: calc(100vw - 16px); }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+
+<style id="nrt-inventory-mobile-fix-20250819">
+/* === Inventory: mobile table cleanup (headers align, no overflow) ======= */
+#inventoryTable{ table-layout: fixed !important; width:100% !important; }
+#inventoryTable th, #inventoryTable td{
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  vertical-align: middle !important;
+}
+/* Tighten spacing and font on small screens for better fit */
+@media (max-width: 600px){
+  #inventoryTable th, #inventoryTable td{
+    font-size: 13px !important;
+    padding: 6px 8px !important;
+    line-height: 1.25 !important;
+  }
+  /* Keep status pill centered and prevent stretching */
+  #inventoryTable .statuscell{ display:flex !important; align-items:center !important; justify-content:center !important; }
+  #inventoryTable .statuspill{ width:auto !important; min-width:72px !important; }
+}
+/* Prevent table from adding unexpected horizontal scroll */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+
+<style id="nrt-inventory-v5">
+/* Make sure the card containing the table clips any overflow */
+.card > #inventoryTable,
+.card > div > #inventoryTable{
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 auto !important;
+  border-collapse:separate !important;
+  border-spacing:0 !important;
+  table-layout:fixed !important;
+}
+/* If any inner element glows/bleeds, clip at the cell level */
+#inventoryTable td, #inventoryTable th{ overflow:hidden !important; }
+#inventoryTable .statuscell{ overflow:hidden !important; position:relative !important; }
+#inventoryTable .statuspill{
+  box-shadow:none !important; filter:none !important; outline:none !important;
+  background-clip:padding-box !important; border:1px solid rgba(0,0,0,.05) !important;
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+  min-width:72px !important; padding:6px 12px !important;
+}
+/* Keep a small visual gap before the tip/line below */
+#inventoryTable + .sticky-foot{ margin-top:10px !important; }
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+
+<style id="nrt-inventory-upgrade-align-status">
+/* 1) Table width == Tip line width (perfectly centered in the card) */
+.card:has(#inventoryTable) .sticky-foot{
+  /* make the tip bar use the same horizontal padding as the card */
+  padding-left: var(--pad) !important;
+  padding-right: var(--pad) !important;
+}
+#inventoryTable{
+  /* inset the table so its left/right edges align with the tip bar */
+  width: calc(100% - (var(--pad) * 2)) !important;
+  margin-left: var(--pad) !important;
+  margin-right: var(--pad) !important;
+  table-layout: fixed !important;
+}
+
+/* 2) Status cells: same vertical size & no color bleeding */
+#inventoryTable td, #inventoryTable th{
+  vertical-align: middle !important;
+  overflow: hidden !important;            /* clip any inner glow/bleed */
+}
+#inventoryTable td.statuscell{
+  display: table-cell !important;         /* undo flex compression */
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  overflow: hidden !important;
+}
+#inventoryTable .statuspill{
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 34px !important;            /* matches input heights */
+  padding: 6px 12px !important;
+  border-radius: 10px !important;
+  background-clip: padding-box !important;/* keep color inside pill */
+  box-shadow: none !important;
+  filter: none !important;
+}
+/* remove row-wide tint that shows outside cells on “Low” rows */
+#inventoryTable tr.low{
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* keep the red/green *inside* the pill only */
+#inventoryTable .status-low{
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #991b1b !important;
+}
+#inventoryTable .status-full{
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+  <link rel="prefetch" href="dashboard.html" as="document"/>
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" as="script" crossorigin>
+</head>
+<body>
+<div class="wrap">
+<header><div><h1>N.R.T.</h1><div class="sub">Inventory</div></div><div class="row"><button class="btn ghost" onclick="location.href='index.html'">Form</button><button class="btn ghost" onclick="location.href='dashboard.html'">Dashboard</button></div></header>
+<div class="grid-4">
+<div class="card stat"><div class="label">Total SKUs</div><div class="value" id="statSkus">0</div></div>
+<div class="card stat"><div class="label">On Hand</div><div class="value" id="statOnHand">0</div></div>
+<div class="card stat"><div class="label">Low Stock</div><div class="value" id="statLow">0</div></div>
+<div class="card stat"><div class="label">Total Inventory (BDT)</div><div class="value" id="statInventory">0.00</div></div>
+</div>
+<div class="card">
+<div class="toolbar">
+<div class="search" id="searchBox">
+<input id="q" placeholder="Search type / model"/>
+<svg fill="none" height="18" viewbox="0 0 24 24" width="18"><path d="M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="#64748b" stroke-linecap="round" stroke-width="2"></path></svg>
+<div class="kbd">/</div>
+<div class="dropdown" id="typeDropdown"></div>
+</div>
+<label class="row" style="gap:8px"><input id="onlyLow" type="checkbox"/> <span class="muted">Show low stock</span></label>
+<div class="spacer"></div>
+<button class="btn ghost" id="pendingBtn" type="button">Pending Delivery</button><button class="btn warn" id="exportBtn">Export (.csv)</button>
+</div>
+</div>
+<div class="card">
+<table id="inventoryTable">
+<thead><tr>
+<th>Product Type</th><th>Model</th><th class="center">Status</th>
+<th class="center">On Hand</th><th class="center">Wholesale (BDT)</th><th class="center">Op Cost %</th><th class="right">Inventory (BDT)</th><th class="center">Re-order Point</th>
+</tr></thead>
+<tbody id="tbl"></tbody>
+</table>
+<div class="sticky-foot"><span class="muted">Tip: On Hand is auto‑saved. Inventory = OnHand × Wholesale × (1 + OpCost%).</span></div>
+</div>
+</div>
+<div class="modal" id="modal" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.38)">
+<div class="panel" style="background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(2,6,23,.2);width:min(520px,92vw);padding:16px;border:1px solid var(--border)">
+<div class="title" id="modalTitle" style="font-weight:800;font-size:18px;margin-bottom:10px">Add Stock</div>
+<div class="row" style="margin-bottom:10px"><select id="mType" style="flex:1"><option value="">Select product type</option></select><select id="mModel" style="flex:1"><option value="">Select model</option></select></div>
+<div class="row"><input id="mQty" min="0" placeholder="Quantity" style="flex:1" type="number"/><input id="mNote" placeholder="Note (optional)" style="flex:2" type="text"/></div>
+<div class="actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px"><button class="btn gray" id="mCancel" type="button">Cancel</button><button class="btn" id="mSave" type="button">Save</button></div>
+</div>
+</div><div id="pendingModal" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.38)"><div class="panel" style="background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(2,6,23,.2);width:min(620px,92vw);padding:16px;border:1px solid var(--border)"><div class="title" style="font-weight:800;font-size:18px;margin-bottom:10px">Pending Delivery</div><div id="pendingList" style="max-height:60vh;overflow:auto;display:grid;gap:10px"></div><div class="actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px"><button class="btn gray" id="pendingClose" type="button">Close</button></div></div></div>
+<script>
+(function(){
+  const K={types:'nrt_types',models:'nrt_models',entries:'nrt_entries_v2'};
+  const INV='nrt_inventory', INV_LOG='nrt_inv_receipts', INV_PROCESSED='nrt_inv_processed';
+  const LOW='nrt_inv_low_thresholds', DEFAULT_LOW=2;
+  const WHOLE='nrt_inv_wholesale', OPCOST='nrt_inv_opcost';
+  const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+  const read=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d;}catch{return d;}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const fmt=n=>Number(n||0).toFixed(2);
+  const getTypes=()=>read(K.types,[]); const getModels=()=>read(K.models,{});
+
+  function getEntries(){ const pref=read(K.entries,null); if(Array.isArray(pref)) return pref;
+    const keys=['nrt_entries_v2','nrt_entries','entries','NRT_ENTRIES','NRT:entries'];
+    for(const k of keys){ const v=read(k,null); if(Array.isArray(v)) return v; }
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); const v=read(k,null); if(Array.isArray(v)&&v.length&&typeof v[0]==='object'&&('items'in v[0])) return v; }
+    return []; }
+
+  function ensureInv(){ const inv=read(INV,{}); const types=getTypes(), models=getModels();
+    types.forEach(t=>{inv[t]=inv[t]||{};(models[t]||[]).forEach(m=>{if(typeof inv[t][m]!=='number') inv[t][m]=0;});}); write(INV,inv);
+    const lows=read(LOW,{}); types.forEach(t=>{lows[t]=lows[t]||{};(models[t]||[]).forEach(m=>{if(typeof lows[t][m]!=='number') lows[t][m]=DEFAULT_LOW;});}); write(LOW,lows);
+    const whole=read(WHOLE,{}); types.forEach(t=>{whole[t]=whole[t]||{};(models[t]||[]).forEach(m=>{if(typeof whole[t][m]!=='number') whole[t][m]=0;});}); write(WHOLE,whole);
+    const op=read(OPCOST,{}); types.forEach(t=>{op[t]=op[t]||{};(models[t]||[]).forEach(m=>{if(typeof op[t][m]!=='number') op[t][m]=0;});}); write(OPCOST,op);
+    return inv; }
+
+// --- Keep Inventory maps in sync with current catalog (types/models) ---
+function pruneCatalogMaps(){
+  const typesArr = getTypes();
+  const typesSet = new Set(typesArr);
+  const modelsMap = getModels();
+
+  function pruneMap(KEY){
+    const map = read(KEY, {});
+    Object.keys(map).forEach(t=>{
+      if(!typesSet.has(t)){ delete map[t]; return; }
+      const validModels = new Set((modelsMap[t]||[]));
+      Object.keys(map[t]||{}).forEach(m=>{
+        if(!validModels.has(m)) delete map[t][m];
+      });
+      if(Object.keys(map[t]||{}).length===0) delete map[t];
+    });
+    write(KEY, map);
+  }
+
+  // Prune all inventory-related maps
+  pruneMap(INV);
+  pruneMap(LOW);
+  pruneMap(WHOLE);
+  pruneMap(OPCOST);
+}
+
+// Run prune first (remove deleted types/models) then re-fill any missing keys
+function syncCatalogToInventory(){
+  pruneCatalogMaps();
+  ensureInv();
+}
+
+  const lowMap=()=>{ensureInv();return read(LOW,{})}; const wholeMap=()=>{ensureInv();return read(WHOLE,{})}; const opMap=()=>{ensureInv();return read(OPCOST,{})};
+  const getThreshold=(t,m)=>Number(((lowMap()[t]||{})[m]??DEFAULT_LOW)), getWholesale=(t,m)=>Number(((wholeMap()[t]||{})[m]??0)), getOpCost=(t,m)=>Number(((opMap()[t]||{})[m]??0));
+  function setThreshold(t,m,v){const map=lowMap(); (map[t]=map[t]||{})[m]=Math.max(0,Number(v)||0); write(LOW,map);}
+  function setWholesale(t,m,v){const map=wholeMap(); (map[t]=map[t]||{})[m]=Math.max(0,Number(v)||0); write(WHOLE,map);}
+  function setOpCost(t,m,v){const map=opMap(); (map[t]=map[t]||{})[m]=Math.max(0,Number(v)||0); write(OPCOST,map);}
+  function setInv(t,m,q){const inv=ensureInv(); inv[t]=inv[t]||{}; inv[t][m]=Number(q)||0; write(INV,inv);} function addInv(t,m,q){const inv=ensureInv(); inv[t]=inv[t]||{}; inv[t][m]=Number(inv[t][m]||0)+Number(q||0); write(INV,inv);}
+  function calcInventory(qty,ws,op){ const base=Number(qty||0)*Number(ws||0); return base*(1+(Number(op||0)/100)); }
+
+  function statsAndTable(){
+    const inv=ensureInv(); const q=($('#q').value||'').toLowerCase(); const onlyLow=$('#onlyLow').checked; const tbody=$('#tbl'); tbody.innerHTML='';
+    const rows=[]; let sku=0,onhand=0,low=0,totalInv=0;
+    Object.keys(inv).sort().forEach(t=>{ Object.keys(inv[t]||{}).sort().forEach(m=>{
+      const qty=Number(inv[t][m]||0), th=getThreshold(t,m), ws=getWholesale(t,m), op=getOpCost(t,m), invVal=calcInventory(qty,ws,op), isLow=qty<=th;
+      const str=(t+' '+m).toLowerCase(); if(q&& !str.includes(q)) return; if(onlyLow && !isLow) return;
+      rows.push({t,m,qty,th,isLow,ws,op,invVal}); sku++; onhand+=qty; if(isLow) low++; totalInv+=invVal; });});
+    rows.forEach(r=>{ const tr=document.createElement('tr'); if(r.isLow) tr.classList.add('low');
+      tr.innerHTML=`<td>${r.t}</td><td>${r.m}</td><td class="statuscell">${r.isLow ? '<span class="statuspill status-low">Low</span>' : '<span class="statuspill status-full">Full</span>'}</td><td class="center"><div class="qty"><button class="dec">−</button><input class="val" type="number" value="${r.qty}" min="0"><button class="inc">＋</button></div></td><td class="center"><input class="wsinp" type="number" min="0" step="0.01" value="${r.ws}" style="width:110px"></td><td class="center"><input class="opin" type="number" min="0" step="0.01" placeholder="0" value="${r.op||''}" style="width:90px"></td><td class="right"><strong>${fmt(r.invVal)}</strong></td><td class="center"><input class="lowinp" type="number" min="0" value="${r.th}" style="width:90px;text-align:center"></td>`;
+      tr.querySelector('.dec').onclick=()=>{setInv(r.t,r.m,Math.max(0,r.qty-1));statsAndTable();};
+      tr.querySelector('.inc').onclick=()=>{setInv(r.t,r.m,r.qty+1);statsAndTable();};
+      tr.querySelector('.val').addEventListener('change',ev=>{setInv(r.t,r.m,Number(ev.target.value||0));statsAndTable();});
+      tr.querySelector('.wsinp').addEventListener('change',ev=>{setWholesale(r.t,r.m,Number(ev.target.value||0));statsAndTable();});
+      tr.querySelector('.opin').addEventListener('change',ev=>{setOpCost(r.t,r.m,Number(ev.target.value||0));statsAndTable();});
+      tr.querySelector('.lowinp').addEventListener('change',ev=>{setThreshold(r.t,r.m,Number(ev.target.value||0));statsAndTable();});
+      tbody.appendChild(tr);
+    });
+    $('#statSkus').textContent=String(sku); $('#statOnHand').textContent=String(onhand); $('#statLow').textContent=String(low); $('#statInventory').textContent=fmt(totalInv);
+  }
+
+  function populateSelectors(){ const types=getTypes(), models=getModels();
+    const mt=$('#mType'); mt.innerHTML='<option value="">Select product type</option>'+types.map(t=>`<option>${t}</option>`).join('');
+    const mm=$('#mModel'); mm.innerHTML='<option value="">Select model</option>'; mt.onchange=()=>{ const list=(models[mt.value]||[]).slice().sort(); mm.innerHTML='<option value="">Select model</option>'+list.map(m=>`<option>${m}</option>`).join(''); };
+  }
+
+  function buildTypeDropdown(){ const box=$('#typeDropdown'); box.innerHTML=''; const term=($('#q').value||'').toLowerCase();
+    getTypes().forEach(t=>{ if(term && !t.toLowerCase().includes(term)) return; const div=document.createElement('div'); div.className='opt'; div.textContent=t; div.onclick=()=>{ $('#q').value=t+' '; statsAndTable(); hideDropdown(); $('#q').focus(); }; box.appendChild(div); });}
+  function showDropdown(){ buildTypeDropdown(); $('#typeDropdown').classList.add('open'); } function hideDropdown(){ $('#typeDropdown').classList.remove('open'); }
+
+  function openModal(){ $('#modal').style.display='grid'; } function closeModal(){ $('#modal').style.display='none'; $('#mQty').value=''; $('#mNote').value=''; }
+  if($('#addBtn')) $('#addBtn').onclick=()=>{populateSelectors();openModal();}; $('#mCancel').onclick=closeModal;
+  $('#mSave').onclick=()=>{ const t=$('#mType').value.trim(), m=$('#mModel').value.trim(), q=Number($('#mQty').value||0);
+    if(!t||!m||!q){alert('Please choose type, model and quantity');return;} addInv(t,m,q); logReceipt(t,m,q,$('#mNote').value.trim()); closeModal(); statsAndTable(); };
+
+  $('#q').addEventListener('input',()=>{statsAndTable(); const v=$('#q').value.trim(); if(v==='') showDropdown(); else buildTypeDropdown();});
+  $('#q').addEventListener('focus',()=>{showDropdown();}); document.addEventListener('click',e=>{const s=$('#searchBox'); if(!s.contains(e.target)) hideDropdown();});
+  $('#onlyLow').addEventListener('change',statsAndTable); document.addEventListener('keydown',e=>{if(e.key==='/' && document.activeElement!==$('#q')){e.preventDefault();$('#q').focus();}});
+
+  // Export CSV with new fields
+  $('#exportBtn').onclick=()=>{ const inv=ensureInv(), lows=lowMap(), wholes=wholeMap(), ops=opMap(); const rows=[['Type','Model','OnHand','Wholesale','OpCostPct','InventoryValue','LowThreshold']];
+    Object.keys(inv).forEach(t=>Object.keys(inv[t]).forEach(m=>{const qty=Number(inv[t][m]||0), ws=Number(((wholes[t]||{})[m]??0)), op=Number(((ops[t]||{})[m]??0)), invVal=calcInventory(qty,ws,op), th=Number(((lows[t]||{})[m]??DEFAULT_LOW)); rows.push([t,m,qty,ws,op,invVal.toFixed(2),th]);}));
+    const esc=v=>'"'+String(v).replace(/"/g,'""')+'"'; const csv=rows.map(r=>r.map(esc).join(',')).join('\r\n'); const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='nrt_inventory.csv'; a.click(); };
+
+  function signatureForItems(items){ const arr=(items||[]).map(i=>`${(i.type||'').trim()}|${(i.model||'').trim()}|${Number(i.qty||0)}`); arr.sort(); return arr.join(';'); }
+  function itemsFromSignature(sig){ if(!sig) return []; return sig.split(';').filter(Boolean).map(s=>{const [t,m,q]=s.split('|'); return {type:t,model:m,qty:Number(q||0)};}); }
+  function addBack(items){ items.forEach(i=>addInv(i.type,i.model,i.qty)); } function subtractNew(items){ items.forEach(i=>addInv(i.type,i.model,-Number(i.qty))); }
+  function reconcileWithEntries(){ const processed=read(INV_PROCESSED,{}), entries=getEntries(), current={};
+    entries.forEach(e=>{ const inv=String(e.invoice||'').trim(); if(!inv) return; const sig=signatureForItems(e.items||[]); current[inv]=sig; const prev=processed[inv];
+      if(prev===undefined) { subtractNew(itemsFromSignature(sig)); } else if(prev!==sig){ addBack(itemsFromSignature(prev)); subtractNew(itemsFromSignature(sig)); } });
+    Object.keys(processed).forEach(inv=>{ if(!(inv in current)) addBack(itemsFromSignature(processed[inv])); }); write(INV_PROCESSED,current); statsAndTable(); }
+
+  reconcileWithEntries(); window.addEventListener('storage',ev=>{ if(ev.key===K.entries) reconcileWithEntries(); if(ev.key===K.types || ev.key===K.models){ syncCatalogToInventory(); statsAndTable(); } });
+  syncCatalogToInventory();
+  statsAndTable();
+
+  // === CHG-009: tap-to-expand rows on mobile ===
+  function attachRowExpand(tr){
+    tr.addEventListener('click', (ev)=>{
+      if(window.innerWidth>600) return;
+      // If the row modal is open, do not toggle expansion (prevents layout jump behind modal)
+      const html = document.documentElement;
+      const modal = document.getElementById('rowModal');
+      if ((html && html.classList.contains('modal-open')) || (modal && getComputedStyle(modal).display !== 'none')) return;
+      const target = ev.target;
+      if(target.tagName==='INPUT' || target.closest('button')) return;
+      tr.classList.toggle('expanded');
+    });
+  }
+
+  // === CHG-012: Pending Delivery (negative qty) view ===
+  function openPending(){
+    const wrap = document.getElementById('pendingList');
+    wrap.innerHTML = '';
+    const inv = read(INV, {});
+    let count = 0;
+    Object.keys(inv).forEach(t=>{
+      Object.keys(inv[t]||{}).forEach(m=>{
+        const qty = Number(inv[t][m]||0);
+        if(qty < 0){
+          count++;
+          const row = document.createElement('div');
+          row.style.display='grid'; row.style.gridTemplateColumns='1fr auto'; row.style.gap='8px'; row.style.alignItems='center'; row.style.border='1px solid var(--border)'; row.style.borderRadius='10px'; row.style.padding='10px'; row.style.background='#fff';
+          row.innerHTML = `<div><strong>${t}</strong> — ${m} • On‑hand: ${qty}</div>`;
+          const act = document.createElement('div');
+          const vbtn = document.createElement('button'); vbtn.className='btn'; vbtn.textContent='View Receipts';
+          vbtn.onclick = ()=> showReceiptsFor(t,m);
+          act.appendChild(vbtn); row.appendChild(act);
+          wrap.appendChild(row);
+        }
+      });
+    });
+    if(count===0){
+      const p=document.createElement('div'); p.textContent='No negative-quantity items found.'; p.style.color='#64748b'; wrap.appendChild(p);
+    }
+    document.getElementById('pendingModal').style.display='grid';
+  }
+  function closePending(){ document.getElementById('pendingModal').style.display='none'; }
+
+  function showReceiptsFor(type, model){
+    const wrap = document.getElementById('pendingList');
+    wrap.innerHTML='';
+    const entries = getEntries();
+    let shown = 0;
+    entries.forEach(e=>{
+      const items = e.items||[];
+      const matched = items.filter(it => String(it.type)===String(type) && String(it.model)===String(model));
+      if(matched.length){
+        const div=document.createElement('div');
+        div.style.border='1px solid var(--border)'; div.style.borderRadius='10px'; div.style.padding='10px'; div.style.background='#fff'; div.style.display='grid'; div.style.gap='4px';
+        const qty = matched.reduce((s,x)=>s+Number(x.qty||0),0);
+        div.innerHTML = `<div><strong>Invoice #${e.invoice}</strong> • ${e.date}</div>
+                         <div>Customer: ${e.store||''} ${e.phone?('('+e.phone+')'):''}</div>
+                         <div>Qty for ${type} / ${model}: ${qty}</div>`;
+        wrap.appendChild(div); shown++;
+      }
+    });
+    if(!shown){
+      const p=document.createElement('div'); p.textContent='No receipts found for this SKU.'; p.style.color='#64748b'; wrap.appendChild(p);
+    }
+  }
+
+  document.getElementById('pendingBtn')?.addEventListener('click', openPending);
+  document.getElementById('pendingClose')?.addEventListener('click', closePending);
+
+  // Hook into table creation to attach expand handlers
+  const _origStatsAndTable = statsAndTable;
+  statsAndTable = function(){
+    _origStatsAndTable();
+    // attach expand after rows are rendered
+    Array.from(document.querySelectorAll('#inventoryTable tbody tr')).forEach(tr=>attachRowExpand(tr));
+  };
+
+})();
+</script>
+<div id="rowModal" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.38);z-index:9999">
+<div class="panel" style="background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(2,6,23,.2);width:min(520px,92vw);padding:16px;border:1px solid #e5e7eb"><div class="title" id="rmTitle">Edit Item</div><div class="form-col"><label for="rmOnHand">On Hand</label><input id="rmOnHand" step="1" type="number"/></div><div class="form-col"><label for="rmWholesale">Wholesale (BDT)</label><input id="rmWholesale" step="0.01" type="number"/></div><div class="form-col"><label for="rmOpCost">Op Cost %</label><input id="rmOpCost" step="0.01" type="number"/></div><div class="form-col"><label for="rmReorder">Re-order Point</label><input id="rmReorder" step="1" type="number"/></div><div class="actions"><button class="btn gray" id="rmCancel" type="button">Cancel</button><button class="btn" id="rmSave" type="button">Save</button></div></div>
+</div><script>
+document.addEventListener('DOMContentLoaded', () => {
+  const isMobile = () => window.matchMedia('(max-width: 600px)').matches;
+  const tbl = document.getElementById('inventoryTable');
+  const modal = document.getElementById('rowModal');
+  if(!tbl || !modal) return;
+
+  const $ = s => modal.querySelector(s);
+  let currentRow = null;
+
+  function openModalFromRow(tr){
+    currentRow = tr;
+    $('#rmTitle').textContent = tr.querySelector('td:nth-child(1)').textContent.trim() + ' — ' + tr.querySelector('td:nth-child(2)').textContent.trim();
+    // rmType removed    = tr.querySelector('td:nth-child(1)').textContent.trim();
+    // rmModel removed   = tr.querySelector('td:nth-child(2)').textContent.trim();
+    $('#rmOnHand').value  = tr.querySelector('td:nth-child(4) input')?.value ?? '';
+    $('#rmWholesale').value = tr.querySelector('td:nth-child(5) input')?.value ?? '';
+    $('#rmOpCost').value    = tr.querySelector('td:nth-child(6) input')?.value ?? '';
+    $('#rmReorder').value   = tr.querySelector('td:nth-child(8) input')?.value ?? '';
+    modal.style.display = 'grid';
+    document.documentElement.classList.add('modal-open'); document.body.classList.add('modal-open');
+    $('#rmOnHand').focus();
+  }
+
+  function closeModal(){
+    modal.style.display = 'none';
+    document.documentElement.classList.remove('modal-open'); document.body.classList.remove('modal-open');
+    currentRow = null;
+  }
+
+  const body = tbl.tBodies[0] || tbl.querySelector('tbody');
+  if(body){
+    body.addEventListener('click', (e) => {
+      if(!isMobile()) return;
+      const tr = e.target.closest('tr');
+      if(!tr) return;
+      if(e.target.closest('button, input, select, a, label')) return;
+      openModalFromRow(tr);
+    });
+
+    body.addEventListener('keydown', (e) => {
+      if(!isMobile()) return;
+      const tr = e.target.closest('tr');
+      if(!tr) return;
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        openModalFromRow(tr);
+      }
+    });
+
+    function syncRowTabindex(){
+      const mobile = isMobile();
+      Array.from(body.querySelectorAll('tr')).forEach(tr => {
+        tr.tabIndex = mobile ? 0 : -1;
+      });
+    }
+    syncRowTabindex();
+    window.addEventListener('resize', syncRowTabindex);
+  }
+
+  modal.querySelector('#rmSave').addEventListener('click', () => {
+    if(!currentRow) return;
+    const setVal = (sel, val) => {
+      const el = currentRow.querySelector(sel);
+      if(el){ el.value = val; el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true})); }
+    };
+    setVal('td:nth-child(4) input', modal.querySelector('#rmOnHand').value);
+    setVal('td:nth-child(5) input', modal.querySelector('#rmWholesale').value);
+    setVal('td:nth-child(6) input', modal.querySelector('#rmOpCost').value);
+    setVal('td:nth-child(8) input', modal.querySelector('#rmReorder').value);
+    closeModal();
+  });
+
+  modal.querySelector('#rmCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+  window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.style.display==='grid') closeModal(); });
+});
+</script>
+<script id="nrt-dropdown-portalizer">
+(function(){
+  function isVisible(el){
+    return !!el && (el.offsetParent !== null || (getComputedStyle(el).position==='fixed' && el.getBoundingClientRect().width>0));
+  }
+  function isOpen(dd){
+    const s = getComputedStyle(dd);
+    return s.display !== 'none' && (dd.classList.contains('open') || s.visibility !== 'hidden');
+  }
+  function anchorOf(dd){
+    // Prefer closest .combo/.search; else previousElementSibling; else parent
+    let a = dd.closest('.combo,.search');
+    if(!a && dd.parentElement) a = dd.parentElement;
+    return a;
+  }
+  function place(dd){
+    const a = anchorOf(dd); if(!a) return;
+    const r = a.getBoundingClientRect();
+    dd.style.position = 'fixed';
+    dd.style.left = r.left + 'px';
+    dd.style.top  = (r.bottom + 6) + 'px';
+    dd.style.width = r.width + 'px';
+    dd.style.maxWidth = r.width + 'px';
+    dd.style.zIndex = '99999';
+  }
+  function tryPlace(dd){
+    if(!dd) return;
+    if(isOpen(dd)){ place(dd); }
+  }
+  function hook(container){
+    const dd = container.querySelector('.dropdown'); if(!dd) return;
+    // Capture focus/click/input to place
+    ['focus','click','input'].forEach(ev => {
+      container.addEventListener(ev, function(){ tryPlace(dd); }, true);
+    });
+    // Observe class/style changes (e.g., .open)
+    const obs = new MutationObserver(()=>tryPlace(dd));
+    obs.observe(dd, {attributes:true, attributeFilter:['class','style']});
+  }
+  function init(){
+    document.querySelectorAll('.combo,.search').forEach(hook);
+  }
+  // Global resize/scroll -> reposition any visible dropdowns
+  function repositionAll(){
+    document.querySelectorAll('.dropdown').forEach(dd => { if(isOpen(dd)) place(dd); });
+  }
+  window.addEventListener('resize', repositionAll, {passive:true});
+  window.addEventListener('scroll', repositionAll, {passive:true, capture:true});
+  // init now and also after DOM load just in case
+  try{ init(); }catch(e){}
+  document.addEventListener('DOMContentLoaded', init, {once:true});
+})();
+</script>
+
+<script id="nrt-close-dd-inventory">
+(function(){
+  function closeDropdowns(ev){
+    const target = ev.target;
+    document.querySelectorAll('.dropdown, .dd').forEach(dd => {
+      // keep open if click happens inside the dropdown or its nearest input container
+      const host = dd.closest('.combo,.search,.row') || dd.parentElement;
+      if(!host) return;
+      if(host.contains(target) || dd.contains(target)) return;
+      // hide by adding 'hidden' class if available, else display:none
+      if(dd.classList.contains('hidden')) return;
+      if(dd.classList.contains('dd') || dd.classList.contains('dropdown')){
+        dd.classList.add('hidden');
+      }else{
+        dd.style.display = 'none';
+      }
+    });
+  }
+  document.addEventListener('mousedown', closeDropdowns, true);
+})();
+</script>
+
+<script id="nrt-ios-toast-js">
+(function(){
+  if(window.nrtIOSNotify) return;
+  function ensureNode(){
+    let node = document.getElementById('nrt-ios-toast');
+    if(!node){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div id=\"nrt-ios-toast\" aria-live=\"polite\" aria-atomic=\"true\" style=\"display:none\">  <div class=\"icon\" id=\"nrt-ios-toast-icon\">⬇️</div>  <div class=\"text\">    <div class=\"title\" id=\"nrt-ios-toast-title\">Downloaded</div>    <div class=\"subtitle\" id=\"nrt-ios-toast-sub\">Your file is saved.</div>  </div>  <div class=\"tick\" id=\"nrt-ios-toast-right\">✓</div></div>`;
+      document.body.appendChild(wrap.firstElementChild);
+      node = document.getElementById('nrt-ios-toast');
+    }
+    return node;
+  }
+  function nrtIOSNotify({title="Done", subtitle="", icon="⬇️", right="✓", duration=2200}={}){
+    const node = ensureNode();
+    node.style.display = 'grid';
+    node.querySelector('#nrt-ios-toast-title').textContent = title;
+    node.querySelector('#nrt-ios-toast-sub').textContent = subtitle||"";
+    node.querySelector('#nrt-ios-toast-icon').textContent = icon||"";
+    node.querySelector('#nrt-ios-toast-right').textContent = right||"✓";
+    // show
+    requestAnimationFrame(()=> node.classList.add('show'));
+    clearTimeout(node._t);
+    node._t = setTimeout(()=>{
+      node.classList.remove('show');
+      // hide after transition
+      setTimeout(()=>{ node.style.display='none'; }, 400);
+    }, duration);
+  }
+  window.nrtIOSNotify = nrtIOSNotify;
+  // Optional: replace alert() with banner-styled error to match iPhone-like look
+  window.nrtAlert = function(msg){ nrtIOSNotify({title:"Notice", subtitle:String(msg||""), icon:"🔔", right:""}); };
+})();
+</script>
+
+
+<script>
+  // iPhone-style banner alerts
+  window.alert = function(msg){
+    if (typeof nrtIOSNotify === 'function') {
+      nrtIOSNotify({ title: 'Notice', subtitle: String(msg||''), icon: '🔔', right: '' });
+    } else {
+      // fallback
+      console.log('ALERT:', msg);
+    }
+  };
+</script>
+
+
+<style id="nrt-inventory-mobile-patch-0823">
+@media (max-width: 600px){
+  #inventoryTable th, #inventoryTable td{ overflow: hidden !important; position: relative; }
+  #inventoryTable td.statuscell{ overflow: visible !important; }
+  #inventoryTable .statuspill{
+    white-space: nowrap !important;
+    min-width: 76px !important;
+    display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  }
+  #inventoryTable tr:not(.expanded) td:nth-child(4),
+  #inventoryTable tr:not(.expanded) td:nth-child(5),
+  #inventoryTable tr:not(.expanded) td:nth-child(6),
+  #inventoryTable tr:not(.expanded) td:nth-child(8){
+    display: none !important; pointer-events: none !important; visibility: hidden !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<script id="nrt-inventory-mobile-js-0823">
+(function(){
+  function blurChildren(el){
+    if(!el) return;
+    el.querySelectorAll('input, select, textarea, button').forEach(function(c){ try{c.blur();}catch(_){}});
+  }
+  document.addEventListener('click', function(e){
+    var tr = e.target && e.target.closest && e.target.closest('#inventoryTable tbody tr');
+    if(!tr) return;
+    if (window.matchMedia('(max-width: 600px)').matches){
+      tr.classList.toggle('expanded');
+      blurChildren(tr);
+    }
+  }, true);
+  var modal = document.getElementById('rowModal');
+  if(modal){
+    var obs = new MutationObserver(function(){
+      var style = window.getComputedStyle(modal);
+      if(style.display === 'none' || modal.hidden){
+        document.activeElement && document.activeElement.blur && document.activeElement.blur();
+        document.querySelectorAll('#inventoryTable tbody tr.expanded').forEach(function(r){
+          r.classList.remove('expanded');
+          blurChildren(r);
+        });
+      }
+    });
+    obs.observe(modal, {attributes:true, attributeFilter:['style','hidden']});
+  }
+})();
+</script>
+</body>
+
+<style id="nrt-inventory-fix-20250823D">
+/* === PC (desktop) — center the entire "On Hand" control (column 4) === */
+@media (min-width: 769px){
+  #inventoryTable td:nth-child(4){
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  #inventoryTable td:nth-child(4) .qty{
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  #inventoryTable td:nth-child(4) .qty button{ width: 36px !important; } /* symmetry */
+}
+
+/* === Mobile — only adjust cols 1,2,3(Status),7(Inventory) as discussed === */
+@media (max-width: 600px){
+  #inventoryTable{ table-layout: fixed !important; width:100% !important; }
+  #inventoryTable th, #inventoryTable td{ vertical-align: middle !important; }
+  #inventoryTable td{ padding-top: 12px !important; padding-bottom: 12px !important; }
+
+  /* Wider Product Type & Model so text doesn't stack vertically */
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){
+    width: 40% !important; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere;
+  }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){
+    width: 22% !important; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere;
+  }
+
+  /* Status column: full cell height, centered pill, no odd background */
+  #inventoryTable th:nth-child(3), #inventoryTable td:nth-child(3){
+    width: 18% !important; text-align: center !important; background: #fff !important;
+  }
+  #inventoryTable td:nth-child(3) .pill,
+  #inventoryTable td:nth-child(3) .statuspill{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 26px !important;  /* matches other cells visually */
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Inventory (BDT) — header wraps cleanly, numbers align right */
+  #inventoryTable th:nth-child(7), #inventoryTable td:nth-child(7){
+    width: 20% !important; text-align: right !important;
+  }
+  #inventoryTable th:nth-child(7){
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    font-size: 12px !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<style id="nrt-inventory-fix-20250823E">
+/* === DESKTOP (PC): restore normal table layout & center 'On Hand' === */
+@media (min-width: 769px){
+  /* Revert any flex display on the td that broke row layout */
+  #inventoryTable td:nth-child(4){
+    display: table-cell !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+  }
+  /* Center the qty control without changing table layout */
+  #inventoryTable td:nth-child(4) .qty{
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+/* === MOBILE: prevent overlap; allow names to wrap cleanly === */
+@media (max-width: 600px){
+  #inventoryTable{ table-layout: fixed !important; width: 100% !important; }
+  #inventoryTable th, #inventoryTable td{ vertical-align: middle !important; }
+  #inventoryTable tbody td{ padding-top: 12px !important; padding-bottom: 12px !important; }
+
+  /* Column widths tuned to avoid collisions */
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ /* Product Type */
+    width: 38% !important; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere;
+  }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ /* Model */
+    width: 26% !important; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere;
+  }
+  #inventoryTable th:nth-child(3), #inventoryTable td:nth-child(3){ /* Status */
+    width: 18% !important; text-align: center !important; overflow: hidden !important;
+  }
+  #inventoryTable th:nth-child(7), #inventoryTable td:nth-child(7){ /* Inventory (BDT) */
+    width: 18% !important; text-align: right !important;
+  }
+  #inventoryTable th:nth-child(7){
+    white-space: normal !important; line-height: 1.2 !important; font-size: 12px !important;
+  }
+
+  /* Status pill fits within cell and stays horizontal */
+  #inventoryTable td:nth-child(3) .pill,
+  #inventoryTable td:nth-child(3) .statuspill{
+    display: inline-flex !important;
+    max-width: 100% !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    white-space: nowrap !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<style id="nrt-inventory-fix-20250823F">
+/* ===== PC: prevent 'On Hand' from overlapping 'Wholesale' ===== */
+@media (min-width: 769px){
+  /* Keep auto table layout and constrain the 4th column */
+  #inventoryTable{ table-layout: auto !important; }
+  #inventoryTable th:nth-child(4), #inventoryTable td:nth-child(4){
+    width: 160px !important;           /* steady width for qty control */
+    overflow: hidden !important;        /* clip anything that might spill */
+    white-space: nowrap !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+  #inventoryTable td:nth-child(4) .qty{
+    max-width: 140px !important;        /* fits inside the cell */
+    width: 140px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<style id="nrt-inventory-wrap-20250823I">
+/* === Mobile: allow Product Type & Model to wrap at spaces; protect Status/Inventory === */
+@media (max-width: 600px){
+  /* Names wrap on multiple lines (break at spaces, not mid‑word) */
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1),
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important; /* only break long words if needed */
+  }
+  /* Remove the earlier forced min-width on Status to avoid squeezing neighbors */
+  #inventoryTable th:nth-child(3), #inventoryTable td:nth-child(3){
+    min-width: unset !important;
+    white-space: nowrap !important; /* keep pill on one line */
+  }
+  /* Keep Inventory header/value on one line */
+  #inventoryTable th:nth-child(7), #inventoryTable td:nth-child(7){
+    white-space: nowrap !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<style id="nrt-mobile-cols-FINAL">
+/* === Mobile view (≤600px): show only Product Type, Model, Status === */
+@media (max-width: 600px){
+  /* Hide columns 4–8 including Inventory (7) */
+  #inventoryTable th:nth-child(4),
+  #inventoryTable th:nth-child(5),
+  #inventoryTable th:nth-child(6),
+  #inventoryTable th:nth-child(7),
+  #inventoryTable th:nth-child(8),
+  #inventoryTable td:nth-child(4),
+  #inventoryTable td:nth-child(5),
+  #inventoryTable td:nth-child(6),
+  #inventoryTable td:nth-child(7),
+  #inventoryTable td:nth-child(8){
+    display: none !important;
+  }
+
+  /* Give Status column enough width for 'Full/Low' pill */
+  #inventoryTable th:nth-child(3),
+  #inventoryTable td:nth-child(3){
+    min-width: 96px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  /* Allow multi-word names to wrap nicely */
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1),
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+}
+
+
+/* Final: Inventory table alignment (desktop) */
+@media (min-width: 1024px){
+  #inventoryTable{ width:100% !important; table-layout: fixed !important; }
+  #inventoryTable th{ white-space:nowrap !important; writing-mode: horizontal-tb !important; transform: none !important; }
+  #inventoryTable th:nth-child(1), #inventoryTable td:nth-child(1){ width: 20% !important; }
+  #inventoryTable th:nth-child(2), #inventoryTable td:nth-child(2){ width: 16% !important; }
+  #inventoryTable td, #inventoryTable th{ overflow:hidden; text-overflow:ellipsis; }
+}
+
+</style>
+
+<script id="nrt-rowmodal-inventory-FINAL">
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('rowModal');
+  if(!modal) return;
+
+  // Ensure the Inventory (BDT) display exists in the modal
+  if(!modal.querySelector('#rmInventoryView')){
+    const panel = modal.querySelector('.panel');
+    const reorder = modal.querySelector('#rmReorder')?.closest('.form-col') || panel.querySelector('.form-col:last-of-type');
+    const wrap = document.createElement('div');
+    wrap.className = 'form-col';
+    wrap.innerHTML = '<label>Inventory (BDT)</label><div id="rmInventoryView" style="font-weight:800;font-size:16px">0.00</div>';
+    if(reorder && reorder.nextSibling){
+      panel.insertBefore(wrap, reorder.nextSibling);
+    }else{
+      panel.appendChild(wrap);
+    }
+  }
+
+  const invView = () => modal.querySelector('#rmInventoryView');
+
+  function recomputeModalInventory(){
+    const on = parseFloat(modal.querySelector('#rmOnHand')?.value || 0);
+    const ws = parseFloat(modal.querySelector('#rmWholesale')?.value || 0);
+    const op = parseFloat(modal.querySelector('#rmOpCost')?.value || 0);
+    const inv = (on * ws) * (1 + (op||0)/100);
+    const node = invView();
+    if(node) node.textContent = isFinite(inv) ? inv.toFixed(2) : '0.00';
+  }
+
+  // Hook inputs to update the computed inventory
+  ['input','change'].forEach(ev => {
+    modal.addEventListener(ev, (e) => {
+      if(['rmOnHand','rmWholesale','rmOpCost'].includes(e.target?.id)) recomputeModalInventory();
+    }, true);
+  });
+
+  // Also recompute when the modal is shown (open)
+  const openObs = new MutationObserver(()=>{
+    if(getComputedStyle(modal).display !== 'none') {
+      setTimeout(recomputeModalInventory, 50);
+    }
+  });
+  openObs.observe(modal, {attributes:true, attributeFilter:['style','class']});
+});
+</script>

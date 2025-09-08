@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>N.R.T. — Dashboard</title>
+<link href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --accent:#2563eb;
+      --accent-2:#16a34a;
+      --warn:#ef4444;
+      --ring:#c7d2fe;
+      --shadow:0 6px 20px rgba(28,39,54,.08);
+      --radius:14px;
+      --radius-sm:10px;
+      --maxw:1040px;
+      --pad:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:var(--maxw); margin:26px auto; padding:0 16px;}
+    header{
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;
+      padding: 14px 16px; background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+    h1{font-size:22px; margin:0}
+    .sub{color:var(--muted); font-weight:500; font-size:13px}
+    .btn{
+      appearance:none; border:0; background:var(--accent); color:#fff; padding:10px 14px; border-radius:10px;
+      font-weight:600; cursor:pointer; box-shadow:var(--shadow);
+    }
+    .btn:active{transform:translateY(1px)}
+    .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+    .card{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:var(--pad);
+    }
+    .stat .label{color:var(--muted); font-weight:600; margin-bottom:8px}
+    .stat .value{font-size:26px; font-weight:800; letter-spacing:.3px}
+    .row{
+      display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;
+    }
+    .row-1{margin-top:14px;}
+    .chart-box{height:220px; display:flex; align-items:center; justify-content:center;}
+    canvas{width:100% !important; height:220px !important;}
+    @media (max-width:900px){
+      .grid-3{grid-template-columns:1fr;}
+      .row{grid-template-columns:1fr;}
+      canvas{height:200px !important;}
+    }
+  
+/* === NRT KPI grid upgrade (CHG-007) ======================================= */
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+@media (max-width:900px){
+  .kpi-grid{grid-template-columns:1fr;}
+}
+/* ========================================================================== */
+
+/* === Fix Pass: header parity (CHG-C) ======================================= */
+.title-actions .row{display:flex; gap:12px; align-items:center;}
+.title-left{display:flex; flex-direction:column;}
+.btn.ghost{background:#eef2ff; color:#3730a3;}
+/* ========================================================================== */
+</style>
+<link href="manifest.json" rel="manifest"/>
+<link href="icon-192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="icon-512x512.png" rel="icon" sizes="512x512" type="image/png"/>
+<meta content="#ffffff" name="theme-color"/>
+<style id="nrt-design-overrides">
+
+/* === N.R.T. Design Overrides (Design-only) ===================================
+   - Make all inputs consistent (incl. readonly: invoice, number, address, grand)
+   - Make product row (qty/price/total) less bulky but finger-friendly
+   - Keep system dark-mode support
+============================================================================= */
+
+:root{
+  --inp-h: 50px;
+  --inp-r: 12px;
+  --inp-b: 1.5px;
+  --border: #e5e7eb;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #3b82f6;
+  --ring: rgba(59,130,246,.25);
+  --soft: #f8fafc;
+}
+
+/* Dark mode tokens */
+@media (prefers-color-scheme: dark){
+  :root{
+    /* Keep light UI even in dark mode (design-only) */
+    --border: #d1d5db;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --soft: #f8fafc;
+    --ring: rgba(165,180,252,.35);
+  }
+}
+
+
+/* Global input look */
+body .wrap input[type="text"],
+body .wrap input[type="number"],
+body .wrap input[type="date"],
+body .wrap select,
+.section table td input {
+  min-height: var(--inp-h) !important;
+  font-size: 16px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+/* Readonly fields should look like normal inputs */
+#invoice, #contactPhone, #contactAddress, #grand, #savedSearch,
+body .wrap input[readonly]{
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  opacity: 1 !important;
+  min-height: var(--inp-h) !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+}
+
+/* Search inputs consistent */
+#contactSearch{ min-height: var(--inp-h) !important; }
+
+/* Product row — slimmer */
+.section table tbody td{ padding-top: 8px !important; padding-bottom: 8px !important; }
+
+/* Quantity group: compact but usable */
+.qty{
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 4px 6px !important;
+  border: var(--inp-b) solid var(--border) !important;
+  border-radius: 999px !important;
+  background: var(--surface) !important;
+}
+.qty .qtyInput{
+  width: 90px !important; height: 32px !important;
+  border:0 !important; background:transparent !important;
+  text-align:center !important; font-size:16px !important; padding:0 !important;
+}
+.qty .inc, .qty .dec{
+  width: 28px !important; height: 28px !important; line-height: 24px !important;
+  border-radius: 999px !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--soft) !important; font-size:18px !important; padding:0 !important;
+  display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* Numeric fields align right */
+.priceInput, .lineTotal, #due{ text-align:right !important; font-variant-numeric: tabular-nums; }
+.priceInput, .lineTotal{ min-width: 120px !important; }
+#due{ min-width: 180px !important; }
+
+/* Focus ring */
+body .wrap input[type="text"]:focus,
+body .wrap input[type="number"]:focus,
+body .wrap input[type="date"]:focus,
+body .wrap select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--ring) !important;
+  outline: none !important;
+}
+
+
+/* === Mobile responsiveness for items table (design-only) === */
+@media (max-width: 640px){
+  /* Collapse table into cards to avoid horizontal scroll */
+  .section table thead{ display:none !important; }
+  .section table, .section table tbody, .section table tr, .section table td{ display:block !important; width:100% !important; }
+  .section table tbody tr{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; }
+  .section table tbody td{ border:0 !important; padding:6px 0 !important; background:transparent !important; }
+  .section table tbody td.right{ text-align:left !important; }
+  /* Inputs use full width on mobile */
+  .priceInput, .lineTotal, #due{ min-width:0 !important; width:100% !important; }
+  /* Quantity control smaller */
+  .qty .qtyInput{ width:64px !important; }
+}
+</style>
+<style id="nrt-shared-header-parity">
+/* Shared header layout + button parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so iOS/Android don’t baseline-shift them */
+.titlebar .title-actions .btn{ line-height:1; padding:10px 14px; margin:0; }
+@media (min-width:600px){ .titlebar{ min-height:64px; } } /* steady header height */
+/* Remove page-specific offsets */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+/* Global no-horizontal-scroll safeguards */
+html, body { max-width: 100%; overflow-x: hidden; }
+.wrap, .card, table { max-width: 100%; }
+table{ table-layout: auto; }
+img, canvas, svg, video{ max-width: 100%; height: auto; display: block; }
+[class*="titlebar"], .toolbar, .sticky-foot{ max-width:100%; overflow-x:hidden; }
+</style><style id="nrt-header-parity-final">
+/* Shared header layout + parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so they don't sit low */
+.titlebar .title-actions .btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  line-height:1; padding:10px 16px; height:38px; border-radius:12px; margin:0;
+}
+/* Keep header height steady */
+@media (min-width:600px){ .titlebar{ min-height:64px; } }
+/* Nuke any legacy vertical offset */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+</style>
+<style id="nrt-header-center-nudge">
+/* Minimal fix: lift header action buttons slightly to sit perfectly centered */
+header .title-actions{ position: relative; top: -6px !important; }
+</style>
+<style id="nrt-header-64">/* Unified header height and layout across pages */header{min-height:64px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;}header .row, header .title-actions .row{display:flex !important;gap:12px !important;align-items:center !important;flex-wrap:nowrap !important;}</style><style id="pc-desktop-lock-1100">
+/* === Desktop: lock to original app width (approx like your screenshot) === */
+:root{ --app-desktop-maxw: 1100px; }  /* adjust to 1000–1200px if you prefer */
+
+@media (min-width: 1280px){
+  .wrap{
+    max-width: var(--app-desktop-maxw) !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* === Tables: keep header/body perfectly aligned ========================= */
+#itemsTable, #inventoryTable{
+  table-layout: fixed !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+#itemsTable th, #itemsTable td,
+#inventoryTable th, #inventoryTable td{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* optional helpers */
+.right{ text-align: right !important; }
+.center{ text-align: center !important; }
+</style><style id="nrt-fixes-20250819">
+/* === Alignment & behavior fixes (2025-08-19) =========================== */
+/* Keep natural column sizing; action column compact */
+#itemsTable { table-layout: auto !important; }
+#itemsTable th:last-child, #itemsTable td:last-child { width: 1%; white-space: nowrap; }
+/* Center the Qty header and its column */
+#itemsTable thead th:nth-child(3){ text-align:center !important; }
+#itemsTable tbody td:nth-child(3){ text-align:center !important; }
+/* Make sure dropdowns can overlay */
+.dropdown{ z-index: 9999 !important; }
+.card{ overflow: visible !important; }
+/* ====================================================================== */
+</style>
+<style id="nrt-ios-toast-css">
+/* iOS-style top notification (like iPhone banners) */
+#nrt-ios-toast {
+  position: fixed;
+  left: 50%;
+  top: env(safe-area-inset-top, 8px);
+  transform: translateX(-50%) translateY(-120%);
+  min-width: min(520px, calc(100vw - 24px));
+  background: rgba(255,255,255,.98);
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(2,6,23,.18);
+  padding: 10px 14px;
+  z-index: 999999;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  transition: transform .32s cubic-bezier(.2,.9,.2,1);
+  font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Inter, Arial;
+}
+#nrt-ios-toast.show { transform: translateX(-50%) translateY(0); }
+#nrt-ios-toast .icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 900;
+  background: #eef2ff; color:#3730a3;
+}
+#nrt-ios-toast .text { display:flex; flex-direction:column; line-height:1.2; }
+#nrt-ios-toast .title { font-weight: 800; font-size: 14px; }
+#nrt-ios-toast .subtitle { font-size: 12px; color:#475569; margin-top:2px; }
+#nrt-ios-toast .tick {
+  width: 20px; height: 20px; border-radius: 999px; border:2px solid #10b981;
+  display:grid; place-items:center; font-size:12px; color:#10b981; font-weight:900;
+}
+@media (max-width: 480px){
+  #nrt-ios-toast { min-width: calc(100vw - 16px); }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header><div class="title-left"><h1>N.R.T.</h1><div class="sub">Sales Dashboard</div></div><div class="title-actions"><div class="row"><button class="btn ghost" onclick="location.href='index.html'">Form</button><button class="btn ghost" onclick="location.href='inventory.html'">Inventory</button></div></div></header>
+<!-- Stats -->
+<div class="kpi-grid">
+<div class="card stat">
+<div class="label">Total Revenue</div>
+<div class="value" id="statRevenue">BDT 0.00</div>
+</div>
+<div class="card stat">
+<div class="label">Outstanding Due</div>
+<div class="value" id="statDue">BDT 0.00</div>
+</div>
+<div class="card stat">
+<div class="label">Total Shops</div>
+<div class="value" id="statShops">0</div>
+</div>
+<div class="card stat"><div class="label">Gross Profit</div><div class="value" id="statGrossProfit">BDT 0.00</div></div></div>
+<!-- Charts row -->
+<div class="row">
+<div class="card">
+<div class="label" style="margin-bottom:8px">Total Revenue by Date</div>
+<div class="chart-box"><canvas id="revByDate"></canvas></div>
+</div>
+<div class="card">
+<div class="label" style="margin-bottom:8px">Top Product</div>
+<div class="chart-box"><canvas id="topProduct"></canvas></div>
+</div>
+</div>
+<!-- Bottom -->
+<div class="row row-1">
+<div class="card" style="grid-column:1 / -1">
+<div class="label" style="margin-bottom:8px">Sales by Store</div>
+<div class="chart-box"><canvas id="salesByStore"></canvas></div>
+</div>
+</div>
+</div>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+
+// Chart.js rendering for dashboard; reads data from localStorage (nrt_entries_v2 etc.)
+(function(){
+  function fmtBDT(n){ return 'BDT ' + Number(n||0).toFixed(2); }
+  function readJSON(key, def){ try{ const v = JSON.parse(localStorage.getItem(key)); return v ?? def; } catch(e){ return def; } }
+
+  function getEntries(){
+    const keys = ['nrt_entries_v2','nrt_entries','entries','NRT_ENTRIES','NRT:entries'];
+    for(const k of keys){ const v = readJSON(k, null); if(Array.isArray(v)) return v; }
+    // Heuristic fallback
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i); const v = readJSON(k, null);
+      if(Array.isArray(v) && v.length && typeof v[0]==='object' && ('items' in v[0])) return v;
+    }
+    return [];
+  }
+  function getContactsCount(){
+    const contacts = readJSON('nrt_contacts', []);
+    if(Array.isArray(contacts) && contacts.length){
+      const norm = p => String(p||'').replace(/\D/g,'').slice(-11); // last 11 digits
+      const s = new Set(contacts.map(c => norm(c.phone)).filter(Boolean));
+      return s.size;
+    }
+    const norm = p => String(p||'').replace(/\D/g,'').slice(-11);
+    const s = new Set(getEntries().map(e => norm(e.phone)).filter(Boolean));
+    return s.size;
+  }
+
+  const entries = getEntries();
+  let totalGrand=0, totalDue=0;
+  entries.forEach(e=>{ totalGrand += Number(e.grand||0); totalDue += Number(e.due||0); });
+  const revEl=document.getElementById('statRevenue'); if(revEl) revEl.textContent = fmtBDT(totalGrand);
+  const dueEl=document.getElementById('statDue'); if(dueEl) dueEl.textContent = fmtBDT(totalDue);
+  const shopEl=document.getElementById('statShops'); if(shopEl) shopEl.textContent = String(getContactsCount());
+
+  // Revenue by date
+  const byDate = new Map();
+  entries.forEach(e=>{
+    const d=(e.date||'').slice(0,10); if(!d) return;
+    byDate.set(d, (byDate.get(d)||0) + Number(e.grand||0));
+  });
+  const dateLabels = Array.from(byDate.keys()).sort();
+  const dateValues = dateLabels.map(d=>byDate.get(d));
+  // Trend line (simple linear regression on indices 1..n)
+  function trend(vals){
+    const n=vals.length; if(n===0) return [];
+    let sx=0, sy=0, sxy=0, sxx=0;
+    for(let i=0;i<n;i++){ const x=i+1, y=Number(vals[i]||0); sx+=x; sy+=y; sxy+=x*y; sxx+=x*x; }
+    const denom = n*sxx - sx*sx; const b = denom? (n*sxy - sx*sy)/denom : 0; const a = (sy - b*sx)/n;
+    return Array.from({length:n}, (_,i)=> a + b*(i+1));
+  }
+  const trendValues = trend(dateValues);
+
+  // Top product by revenue (type)
+  const typeMap = new Map();
+  entries.forEach(e=> (e.items||[]).forEach(it=>{
+    const type=(it.type||'').trim() || 'Unknown';
+    const rev = Number(it.qty||0) * Number(it.price||0);
+    typeMap.set(type, (typeMap.get(type)||0)+rev);
+  }));
+  const topLabels = Array.from(typeMap.keys());
+  const topValues = topLabels.map(l=>typeMap.get(l));
+
+  // Sales by store (group by unique phone number; label shows "Name • Number")
+  const storeMap = new Map(); // key: normalized phone, value: revenue
+  const labelMap = new Map(); // key -> display label
+  const normPhone = p => String(p||'').replace(/\D/g,'').slice(-11);
+  entries.forEach(e=>{
+    const phone = normPhone(e.phone);
+    const name = (e.store||'').trim() || 'Unknown';
+    const label = phone ? `${name} • ${phone}` : name;
+    const key = phone || label; // prefer phone, fall back to label
+    storeMap.set(key, (storeMap.get(key)||0) + Number(e.grand||0));
+    if (!labelMap.has(key)) labelMap.set(key, label);
+  });
+  function shortStoreLabel(s){
+  const m = String(s||'').match(/^(.*)\s•\s.*(\d{3})$/);
+  if(m) return m[1]+'.'+m[2];
+  const m2 = String(s||'').match(/^(.*?)[^.]*\.?([0-9]{3})$/); if(m2) return (m2[1]||'').replace(/\s+$/,'') + '.' + m2[2];
+  return s;
+}
+const storeArr = Array.from(storeMap.entries()).sort((a,b)=>b[1]-a[1]);
+  const storeLabels = storeArr.map(([k])=> labelMap.get(k) || k);
+  const storeValues = storeArr.map(([,v])=> v);
+
+  // Build charts
+  const revCtx = document.getElementById('revByDate')?.getContext('2d');
+  const donutCtx = document.getElementById('topProduct')?.getContext('2d');
+  const storeCtx = document.getElementById('salesByStore')?.getContext('2d');
+
+  if(revCtx){
+    new Chart(revCtx, {
+      type: 'line',
+      data: { labels: dateLabels, datasets: [
+        { label:'Total Revenue (BDT)', data: dateValues, tension:0.25, fill:false },
+        { label:'Trend Line', data: trendValues, borderDash:[6,6], pointRadius:0, tension:0, fill:false }
+      ]},
+      options: { maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true } } }
+    });
+  }
+  if(donutCtx){
+    new Chart(donutCtx, {
+      type: 'doughnut',
+      data: { labels: topLabels, datasets: [{ data: topValues }]},
+      options: { maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } }
+    });
+  }
+  if(storeCtx){
+    new Chart(storeCtx, {
+      type: 'bar',
+      data: { labels: storeLabels, datasets: [{ label:'Revenue (BDT)', data: storeValues }]},
+      options: { indexAxis:'y', maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true } } }
+    });
+  }
+
+  // === CHG-008: Gross Profit = Total Revenue − Total Inventory ===
+  function computeTotalInventory(){
+    try{
+      const INV='nrt_inventory', WHOLE='nrt_inv_wholesale', OPCOST='nrt_inv_opcost';
+      const inv = JSON.parse(localStorage.getItem(INV)) || {};
+      const whole = JSON.parse(localStorage.getItem(WHOLE)) || {};
+      const op = JSON.parse(localStorage.getItem(OPCOST)) || {};
+      let total = 0;
+      Object.keys(inv).forEach(t=>{
+        const models = inv[t]||{};
+        Object.keys(models).forEach(m=>{
+          const qty = Number(models[m]||0);
+          const ws = Number((whole[t]||{})[m]||0);
+          const oc = Number((op[t]||{})[m]||0);
+          total += qty * ws * (1 + oc/100);
+        });
+      });
+      return total;
+    }catch(e){ return 0; }
+  }
+  const grossEl = document.getElementById('statGrossProfit');
+  if(grossEl){
+    const revenueNum = Number((document.getElementById('statRevenue').textContent||'').replace(/[^0-9.]/g,''))||0;
+    const invTotal = computeTotalInventory();
+    const gross = revenueNum - invTotal;
+    grossEl.textContent = fmtBDT(gross);
+  }
+
+})();
+
+</script>
+
+<script id="nrt-ios-toast-js">
+(function(){
+  if(window.nrtIOSNotify) return;
+  function ensureNode(){
+    let node = document.getElementById('nrt-ios-toast');
+    if(!node){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div id=\"nrt-ios-toast\" aria-live=\"polite\" aria-atomic=\"true\" style=\"display:none\">  <div class=\"icon\" id=\"nrt-ios-toast-icon\">⬇️</div>  <div class=\"text\">    <div class=\"title\" id=\"nrt-ios-toast-title\">Downloaded</div>    <div class=\"subtitle\" id=\"nrt-ios-toast-sub\">Your file is saved.</div>  </div>  <div class=\"tick\" id=\"nrt-ios-toast-right\">✓</div></div>`;
+      document.body.appendChild(wrap.firstElementChild);
+      node = document.getElementById('nrt-ios-toast');
+    }
+    return node;
+  }
+  function nrtIOSNotify({title="Done", subtitle="", icon="⬇️", right="✓", duration=2200}={}){
+    const node = ensureNode();
+    node.style.display = 'grid';
+    node.querySelector('#nrt-ios-toast-title').textContent = title;
+    node.querySelector('#nrt-ios-toast-sub').textContent = subtitle||"";
+    node.querySelector('#nrt-ios-toast-icon').textContent = icon||"";
+    node.querySelector('#nrt-ios-toast-right').textContent = right||"✓";
+    // show
+    requestAnimationFrame(()=> node.classList.add('show'));
+    clearTimeout(node._t);
+    node._t = setTimeout(()=>{
+      node.classList.remove('show');
+      // hide after transition
+      setTimeout(()=>{ node.style.display='none'; }, 400);
+    }, duration);
+  }
+  window.nrtIOSNotify = nrtIOSNotify;
+  // Optional: replace alert() with banner-styled error to match iPhone-like look
+  window.nrtAlert = function(msg){ nrtIOSNotify({title:"Notice", subtitle:String(msg||""), icon:"🔔", right:""}); };
+})();
+</script>
+
+
+<script>
+  // iPhone-style banner alerts
+  window.alert = function(msg){
+    if (typeof nrtIOSNotify === 'function') {
+      nrtIOSNotify({ title: 'Notice', subtitle: String(msg||''), icon: '🔔', right: '' });
+    } else {
+      // fallback
+      console.log('ALERT:', msg);
+    }
+  };
+</script>
+
+
+<!-- NRT Unified UI Fixes (2025-08-23) -->
+<style id="nrt-unified-fixes">
+/* ===== 1) Header / Titlebar parity ===== */
+header, .titlebar{
+  min-height:64px !important;
+  display:flex !important; align-items:center !important; justify-content:space-between !important;
+  gap:12px !important;
+}
+.titlebar .title{ display:flex !important; flex-direction:column !important; gap:4px !important; }
+.titlebar .title-actions{ display:flex !important; align-items:center !important; gap:12px !important; flex-wrap:nowrap !important; }
+.titlebar .title-actions .btn{
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+  height:38px !important; padding:10px 16px !important; line-height:1 !important; border-radius:12px !important; margin:0 !important;
+}
+/* Prevent any legacy offsets */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+
+/* ===== 2) Inputs — standardized height/look ===== */
+:root{ --nrt-inp-h:46px; }
+input[type="text"], input[type="number"], input[type="date"], select{
+  min-height:var(--nrt-inp-h) !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  border:1px solid #e2e8f0 !important;
+  background:#fff !important;
+  color:#0f172a !important;
+  box-shadow:0 1px 2px rgba(15,23,42,.04) !important;
+  font-size:14px !important;
+}
+input[readonly]{
+  background:#fff !important; color:#0f172a !important; opacity:1 !important;
+  min-height:var(--nrt-inp-h) !important; border:1px solid #e2e8f0 !important;
+}
+/* Focus */
+input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus, select:focus{
+  outline:none !important; border-color:#a5b4fc !important; box-shadow:0 0 0 4px rgba(165,180,252,.25) !important;
+}
+
+/* ===== 3) No clipping for dropdowns/modals ===== */
+html, body{ max-width:100%; overflow-x:hidden; }
+.wrap, .card, .section, table, tbody, tr, td, th{ overflow:visible !important; }
+.dropdown{ z-index:99999 !important; position:absolute; } /* let it float above */
+
+/* ===== 4) Saved Entries buttons — equal sizing, wrap nicely ===== */
+.saved-card{ display:flex !important; flex-wrap:wrap !important; gap:10px !important; align-items:center !important; }
+.saved-card button{ flex:1 1 auto !important; min-width:90px !important; }
+.saved-card .rec{ flex:1 1 100% !important; } /* receipt link can wrap if needed on small screens */
+
+/* ===== 5) Inventory: row expand affordance on mobile ===== */
+@media (max-width:600px){
+  #inventoryTable tbody tr{ cursor:pointer; position:relative; }
+  #inventoryTable tbody tr::after{
+    content:"›"; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    color:#64748b; font-weight:800;
+  }
+  #inventoryTable tbody tr.expanded::after{ content:"▼"; }
+}
+
+/* ===== 6) Normalize Invoice / Due / Grand widths ===== */
+#invoice, #grand, #due{ min-width:180px !important; width:100% !important; }
+
+/* ===== 7) Desktop app width lock for consistency ===== */
+@media (min-width:1280px){
+  .wrap{ max-width:1100px !important; margin-left:auto !important; margin-right:auto !important; }
+}
+</style>
+
+<!-- NRT Unified JS Helpers (safe, optional) -->
+<script id="nrt-unified-js">
+(function(){
+  // 1) Inventory row expand toggle on mobile
+  document.addEventListener('click', function(e){
+    const tr = e.target?.closest && e.target.closest('#inventoryTable tbody tr');
+    if(!tr) return;
+    if (window.matchMedia('(max-width: 600px)').matches){
+      tr.classList.toggle('expanded');
+    }
+  }, true);
+
+  // 2) Ensure any .dropdown opened inside a scroll area stays fully visible by raising its z-index
+  const raiseDropdown = (dd) => { if(dd){ dd.style.zIndex = '99999'; } };
+  document.addEventListener('click', function(e){
+    const dd = e.target?.closest && e.target.closest('.dropdown');
+    raiseDropdown(dd);
+  }, true);
+})();
+</script>
+
+<script id="nrtx-dashboard-label-shortener">
+(function(){
+  function ready(fn){ if(document.readyState!=='loading'){fn()} else {document.addEventListener('DOMContentLoaded', fn)} }
+  function shortLabel(s){
+    s = (s||'').toString();
+    // Expect formats like "Nasif.01915117081" => "Nasif.081"
+    // Split by '.' and keep the name + last 3 of digits in tail
+    var parts = s.split('.');
+    if(parts.length>=2){
+      var name = parts.slice(0, -1).join('.'); // everything except last segment
+      var tail = parts[parts.length-1].replace(/\D/g,'');
+      var last3 = tail.slice(-3);
+      if(name && last3) return name + '.' + last3;
+    }
+    // If phone embedded without dot, try to extract ending 3 digits
+    var m = s.match(/(\d{3})\s*$/);
+    if(m){ return s.replace(/\s*\d{3}\s*$/,'') + '.' + m[1]; }
+    return s;
+  }
+  ready(function(){
+    // Try to find common places labels live (Chart.js configs) and shorten in-place
+    // 1) data-labels in script tags or globals
+    function processArrays(obj, depth=0){
+      if(!obj || depth>4) return;
+      if(Array.isArray(obj)){
+        for(var i=0;i<obj.length;i++){
+          if(typeof obj[i]==='string'){ obj[i]=shortLabel(obj[i]); }
+          else{ processArrays(obj[i], depth+1); }
+        }
+      }else if(typeof obj==='object'){
+        for(var k in obj){
+          if(obj.hasOwnProperty(k)){
+            if(k==='labels' || k==='dataLabels' || k==='names'){
+              processArrays(obj[k], depth+1);
+            }else{
+              processArrays(obj[k], depth+1);
+            }
+          }
+        }
+      }
+    }
+    // Heuristic: patch any global Chart.js configs if present
+    if(window && typeof window==='object'){
+      for(var key in window){
+        try{ processArrays(window[key]); }catch(e){}
+      }
+    }
+    // Patch any inline script tag JSON blobs with labels
+    document.querySelectorAll('script').forEach(function(s){
+      var t = s.textContent || '';
+      if(/\blabels\s*:\s*\[/.test(t) && !s.dataset.nrtxShortened){
+        s.dataset.nrtxShortened = '1';
+        // non-destructive: we don't rewrite script text; the above global pass should handle most Chart.js inits.
+      }
+    });
+  });
+})();
+</script>
+
+
+<script id="nrtx-store-labels">
+(function(){
+function ready(fn){if(document.readyState!=="loading")fn();else document.addEventListener("DOMContentLoaded",fn);}
+function shortStoreLabel(s){s=String(s||"");const dot=s.match(/^(.*?)[\s•.]+(\d{3,})$/);if(dot){return dot[1].trim()+"."+dot[2].slice(-3);}return s;}
+ready(function(){if(!window.Chart||!Chart.instances)return;Object.values(Chart.instances).forEach(ch=>{const L=ch.config?.data?.labels;if(!Array.isArray(L))return;ch.config.data.labels=L.map(shortStoreLabel);ch.update();});});})();
+</script>
+
+</body>

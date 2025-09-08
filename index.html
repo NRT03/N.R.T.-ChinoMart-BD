@@ -1,0 +1,3421 @@
+<!-- 2025-09-08: Implemented contacts unique-by-phone (normalized); instant UI updates; removed demo contacts seeding; wired Saved Entries Edit; fixed Saved Entries delete confirmation. -->
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>N.R.T. — Record an Achievement</title>
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--primary:#4f46e5;--primary-2:#4338ca;--accent:#f59e0b;--danger:#ef4444;--ok:#10b981;--chip:#eef2ff;}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 12px 28px rgba(20,20,40,.06);border:1px solid #e5e7eb}
+  .titlebar{padding:18px 20px;border-bottom:1px solid #e5e7eb}
+  h1{font-size:22px;margin:0} .muted{color:var(--muted);font-size:12px;margin-top:2px}
+  .section{padding:18px 20px}
+  .grid{display:grid;gap:12px} .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:1fr 1fr 1fr}
+  label{font-weight:650;font-size:12px;margin-bottom:6px;display:block}
+  input[type="text"],input[type="number"],input[type="date"]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;outline:none}
+  input[readonly]{background:#f9fafb;color:#6b7280}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:650;cursor:pointer}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.primary:hover{background:var(--primary-2)}
+  .btn.ghost{background:var(--chip);color:#3730a3}
+  .btn.warn{background:var(--accent);color:#fff}
+  .btn.danger{background:var(--danger);color:#fff}
+  .btn.gray{background:#e5e7eb}
+  .footer{padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;gap:12px;position:sticky;bottom:0;background:var(--card);z-index:100;box-shadow:0 -6px 16px rgba(20,20,40,.06);padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+  .spacer{flex:1}
+  .chip{display:inline-flex;align-items:center;background:var(--chip);padding:6px 10px;border-radius:999px;gap:8px;font-size:12px}
+  .combo{position:relative}
+  .dropdown{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-top:6px;max-height:220px;overflow:auto;z-index:30;box-shadow:0 10px 24px rgba(20,20,40,.08)}
+  .dd-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6}
+  .dd-item:last-child{border-bottom:0}
+  .dd-item:hover{background:#f3f4f6}
+  .qty{display:inline-flex;align-items:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px}
+  .qty input{width:56px;border:0;background:transparent;text-align:center;padding:10px;appearance:textfield}
+  .qty input::-webkit-outer-spin-button,.qty input::-webkit-inner-spin-button{appearance:none;margin:0}
+  .qty button{border:0;background:transparent;padding:8px 10px;cursor:pointer}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th{font-size:12px;text-align:left;color:#6b7280;font-weight:700;padding:0 8px}
+  td{background:#fff;border:1px solid #e5e7eb;padding:8px;border-radius:10px;vertical-align:middle}
+  td > input, td > .qty, td > .combo input{width:100%}
+  td > .qty{justify-content:center;}
+  .right{text-align:right}
+  .manage{background:#fafafa;border-top:1px dashed #e5e7eb}
+  .pill{font-size:11px;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;background:#fff;cursor:pointer}
+  .mini-pencil{position:absolute; right:6px; top:6px; border:1px solid #e5e7eb; border-radius:999px; padding:2px 6px; font-size:12px; background:#fff; cursor:pointer; line-height:1}
+  .combo{position:relative}
+  @media (min-width: 769px){
+    .mini-pencil{display:none}
+  }
+
+  .list{display:grid;gap:8px}
+  .list .rowitem{display:grid;grid-template-columns:1fr 180px 1fr auto auto;gap:8px;align-items:center}
+  .rowitem input{padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;width:100%}
+  .hidden{display:none}
+  .saved-card{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+  .saved-card .meta{font-size:12px;color:#6b7280}
+  .icon-btn{background:transparent;border:0;cursor:pointer;color:#6b7280}
+  .icon{width:16px;height:16px;display:inline-block}
+  @media (max-width:820px){ .g2,.g3{grid-template-columns:1fr} .list .rowitem{grid-template-columns:1fr} .footer{flex-direction:column} }
+
+/* === Modern UI refresh (mobile-first, iOS/Android friendly) === */
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --primary:#4f46e5;
+  --primary-2:#4338ca;
+  --ring:#a5b4fc;
+  --danger:#ef4444;
+  --accent:#f59e0b;
+}
+html,body{font-size:16px;}
+body{background:radial-gradient(1200px 800px at 10% -10%, #f1f5ff 0%, #f7f8fb 40%, #f7f8fb 100%) fixed;}
+.wrap{max-width:1100px;margin:28px auto;padding:0 16px;}
+
+/* Inputs */
+input[type="text"],input[type="number"],input[type="date"]{
+  border-radius:12px;
+  min-height:44px;
+  border:1px solid #e2e8f0;
+  transition:box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus{
+  border-color:var(--ring);
+  box-shadow:0 0 0 4px rgba(165,180,252,.25);
+}
+
+
+/* Mobile layout for expanded contact row: 3 input lines, actions on 4th */
+@media (max-width: 820px){
+  #manageContacts .rowitem.is-expanded{
+    display:grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-auto-rows: auto;
+    gap: 8px !important;
+    align-items: start;
+  }
+  #manageContacts .rowitem.is-expanded > input{
+    grid-column: 1 / -1 !important; /* each input takes its own row */
+  }
+  #manageContacts .rowitem.is-expanded .save,
+  #manageContacts .rowitem.is-expanded .del{
+    display: none !important;
+    grid-column: span 1 !important;
+    justify-content: center;
+  }
+  #manageContacts .rowitem.is-expanded:focus-within .save,
+  #manageContacts .rowitem.is-expanded:focus-within .del{
+    display: inline-flex !important;
+  }
+}
+
+
+/* Force Due & Grand wrappers to full width on small screens */
+@media (max-width: 820px){
+  .row div:has(> #due),
+  .row div:has(> #grand){
+    min-width:100% !important;
+    width:100% !important;
+    flex-basis:100% !important;
+  }
+}
+
+
+/* Make two-column grids single-column on small screens (Date + Invoice) */
+@media (max-width: 820px){
+  .grid.g2{ grid-template-columns: 1fr !important; }
+}
+
+
+/* Mobile layout for expanded contact row: 3 input lines, actions on 4th; show actions only while editing */
+@media (max-width: 820px){
+  #manageContacts .rowitem.is-expanded{
+    display:grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap:8px !important;
+    align-items:start;
+  }
+  #manageContacts .rowitem.is-expanded > input{ grid-column:1 / -1 !important; }
+  #manageContacts .rowitem.is-expanded .save,
+  #manageContacts .rowitem.is-expanded .del{ display:none !important; grid-column:span 1; justify-content:center; }
+  #manageContacts .rowitem.is-expanded:focus-within .save,
+  #manageContacts .rowitem.is-expanded:focus-within .del{ display:inline-flex !important; }
+}
+
+
+/* Make two-column grids single-column on small screens (Date + Invoice full width) */
+@media (max-width: 820px){
+  .grid.g2{ grid-template-columns: 1fr !important; }
+}
+
+/* Buttons */
+.btn{border-radius:12px;padding:12px 16px;font-weight:700;min-height:44px;transition:transform .06s ease, box-shadow .15s ease, background-color .15s ease;}
+.btn:active{transform:translateY(1px);}
+.btn.primary{
+  background:linear-gradient(180deg, var(--primary) 0%, var(--primary-2) 100%);
+  box-shadow:0 8px 16px rgba(79,70,229,.18);
+}
+.btn.primary:hover{filter:brightness(1.02);}
+.btn.ghost{background:#eef2ff;color:#3730a3;}
+.btn.warn{background:#f59e0b;color:#fff;box-shadow:0 8px 16px rgba(245,158,11,.18)}
+.btn.danger{background:#ef4444;color:#fff;box-shadow:0 8px 16px rgba(239,68,68,.18)}
+
+/* Card + title */
+.card{border-radius:20px;box-shadow:0 20px 40px rgba(2,6,23,.06);border:1px solid #e2e8f0;}
+.titlebar h1{font-size:24px}
+.muted{color:var(--muted)}
+
+/* Table */
+table{border-collapse:separate;border-spacing:0 10px;}
+td{background:#fff;border-top-left-radius:12px;border-bottom-left-radius:12px}
+
+/* Sticky actions */
+.footer{position:sticky;bottom:0;z-index:20;background:linear-gradient(180deg, rgba(255,255,255,.86), #fff);backdrop-filter:blur(8px);border-top:1px solid #e2e8f0;padding:14px 16px;gap:12px}
+@supports(padding: max(0px)){
+  .footer{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+}
+
+/* Dropdowns */
+.dropdown{border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 24px rgba(2,6,23,.08)}
+.dd-item{padding:10px 12px;font-size:14px;border-bottom:1px solid #f1f5f9}
+.dd-item:hover{background:#f8fafc}
+
+/* Chips / toggles */
+.chip{background:#f1f5ff;color:#3730a3}
+
+/* Responsive */
+@media (max-width: 768px){
+  .g2,.g3{grid-template-columns:1fr !important}
+  .footer{flex-direction:column}
+}
+
+/* === Modal popups for Manage sections (overlay, no scrolling to bottom) === */
+.manage {
+  position: fixed;
+  top: 6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(980px, calc(100vw - 40px));
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 24px 60px rgba(20,20,40,.18);
+  border-radius: 16px;
+  z-index: 1000;
+  padding: 16px;
+}
+.manage.hidden{ display:none; } /* keep hidden behavior */
+body.has-modal{ overflow:hidden; } /* lock body scroll when modal open */
+/* When types & models are shown together, make them tidy columns */
+#manageCatalog .grid.g2{ grid-template-columns: 1fr 1fr; gap: 16px; }
+#manageCatalog .section{ background:transparent; border:0; padding:0; }
+#manageCatalog #closeManageTypes, 
+#manageCatalog #closeManageModels{ display:none; } /* one close button at top */
+
+/* Ensure the Manage Product Types & Models popup is tall enough on larger screens */
+@media (min-width: 768px){
+  #manageCatalog .list{ min-height: 300px; } /* ~5+ rows visible */
+}
+
+/* unified discount combo input */
+.combo-input{display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:12px;background:#fff;height:46px;overflow:hidden}
+.combo-input input{border:0!important;outline:none!important;height:100%;padding:0 12px 0 12px;flex:1;background:transparent}
+.combo-input select{border:0!important;background:transparent;height:100%;padding:0 10px;font-weight:600}
+.combo-input:focus-within{box-shadow:0 0 0 4px rgba(59,130,246,.1);border-color:#c7d2fe}
+/* ensure legacy wrapper doesn't double borders */
+.discount-wrap{border:0!important;padding:0!important}
+
+/* === Fix Pass (Header/Spacing) — 2025-08-18 ================================ */
+/* toolbar */
+.saved-actions{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
+@media (max-width:600px){.saved-actions{overflow-x:auto}}
+/* row actions */
+.row-actions{display:flex;gap:10px;margin-left:auto;white-space:nowrap;flex-wrap:nowrap;min-width:fit-content}
+/* header stack */
+.titlebar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.title-left{display:flex;flex-direction:column}
+/* ========================================================================== */
+</style>
+<link href="manifest.json" rel="manifest"/>
+<link href="icon-192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="icon-512x512.png" rel="icon" sizes="512x512" type="image/png"/>
+<meta content="#ffffff" name="theme-color"/>
+<style id="nrt-design-overrides">
+
+/* === N.R.T. Design Overrides (Design-only) ===================================
+   - Make all inputs consistent (incl. readonly: invoice, number, address, grand)
+   - Make product row (qty/price/total) less bulky but finger-friendly
+   - Keep system dark-mode support
+============================================================================= */
+/* === Center text vertically in embedded Add buttons ======================== */
+#mtAdd, #mmAdd, #csTypeAdd{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  gap: 4px;
+}
+/* Remove transform from active press that breaks centering */
+#mtAdd:active, #mmAdd:active, #csTypeAdd:active{
+  transform: scale(0.98);
+}
+/* ========================================================================= */
+
+/* === Polished style for embedded Add buttons =============================== */
+#mtAdd, #mmAdd, #csTypeAdd{
+  height: 34px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  background: #ffffff !important;
+  color: #4f46e5 !important; /* keep brand-ish purple tone */
+  border: 1px solid rgba(79,70,229,.35) !important;
+  transition: all .18s ease-in-out !important;
+}
+
+#mtAdd::before, #mmAdd::before, #csTypeAdd::before{
+  content: "+"; 
+  display: inline-block;
+  font-weight: 700;
+  margin-right: 6px;
+  transform: translateY(-1px);
+}
+
+/* Hover / focus states */
+#mtAdd:hover, #mmAdd:hover, #csTypeAdd:hover,
+#mtAdd:focus, #mmAdd:focus, #csTypeAdd:focus{
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 10px 24px rgba(79,70,229,.28) !important;
+}
+
+/* Active press */
+#mtAdd:active, #mmAdd:active, #csTypeAdd:active{
+  transform: translateY(-50%) scale(0.98);
+}
+/* ========================================================================== */
+/* CHG-004 header layout */
+.titlebar{ display:flex !important; align-items:center !important; justify-content:space-between !important; gap:12px !important; }
+.titlebar .title-actions .row{ gap:10px; }
+
+
+/* === Integrate “Add” buttons inside search fields (stronger selectors) === */
+/* Make the rows that contain the search inputs positioning contexts */
+.row:has(#mtSearch),
+.row:has(#mmSearch),
+.row:has(#csSearch){
+  position: relative !important;
+}
+
+/* Give room inside inputs for the button chip */
+#mtSearch, #mmSearch, #csSearch{
+  padding-right: 96px !important;
+}
+
+/* Place the Add buttons inside the right end of those inputs */
+#mtAdd, #mmAdd, #csTypeAdd{
+  position: absolute !important;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(59,130,246,.18);
+  z-index: 3;
+}
+/* ======================================================================== */
+
+
+:root{
+  --inp-h: 50px;
+  --inp-r: 12px;
+  --inp-b: 1.5px;
+  --border: #e5e7eb;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #3b82f6;
+  --ring: rgba(59,130,246,.25);
+  --soft: #f8fafc;
+}
+
+/* Dark mode tokens */
+@media (prefers-color-scheme: dark){
+  :root{
+    /* Keep light UI even in dark mode (design-only) */
+    --border: #d1d5db;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --soft: #f8fafc;
+    --ring: rgba(165,180,252,.35);
+  }
+}
+
+
+/* Global input look */
+body .wrap input[type="text"],
+body .wrap input[type="number"],
+body .wrap input[type="date"],
+body .wrap select,
+.section table td input {
+  min-height: var(--inp-h) !important;
+  font-size: 16px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+/* Readonly fields should look like normal inputs */
+#invoice, #contactPhone, #contactAddress, #grand, #savedSearch,
+body .wrap input[readonly]{
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  opacity: 1 !important;
+  min-height: var(--inp-h) !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+}
+
+/* Search inputs consistent */
+/* Make Name/Number/Address boxes use the full available width */
+#contactSearch,
+#contactPhone,
+#contactAddress{
+  width: 100% !important;
+}
+
+#contactSearch{ min-height: var(--inp-h) !important; }
+
+/* Product row — slimmer */
+.section table tbody td{ padding-top: 8px !important; padding-bottom: 8px !important; }
+
+/* Quantity group: compact but usable */
+.qty{
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 4px 6px !important;
+  border: var(--inp-b) solid var(--border) !important;
+  border-radius: 999px !important;
+  background: var(--surface) !important;
+}
+.qty .qtyInput{
+  width: 90px !important; height: 32px !important;
+  border:0 !important; background:transparent !important;
+  text-align:center !important; font-size:16px !important; padding:0 !important;
+}
+.qty .inc, .qty .dec{
+  width: 28px !important; height: 28px !important; line-height: 24px !important;
+  border-radius: 999px !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--soft) !important; font-size:18px !important; padding:0 !important;
+  display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* Numeric fields align right */
+.priceInput, .lineTotal, #due{ text-align:right !important; font-variant-numeric: tabular-nums; }
+.priceInput, .lineTotal{ min-width: 120px !important; }
+#due{ min-width: 180px !important; }
+
+/* Focus ring */
+body .wrap input[type="text"]:focus,
+body .wrap input[type="number"]:focus,
+body .wrap input[type="date"]:focus,
+body .wrap select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--ring) !important;
+  outline: none !important;
+}
+
+
+/* === Mobile responsiveness for items table (design-only) === */
+@media (max-width: 640px){
+  /* Collapse table into cards to avoid horizontal scroll */
+  .section table thead{ display:none !important; }
+  .section table, .section table tbody, .section table tr, .section table td{ display:block !important; width:100% !important; }
+  .section table tbody tr{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; }
+  .section table tbody td{ border:0 !important; padding:6px 0 !important; background:transparent !important; }
+  .section table tbody td.right{ text-align:left !important; }
+  /* Inputs use full width on mobile */
+  .priceInput, .lineTotal, #due{ min-width:0 !important; width:100% !important; }
+  /* Quantity control smaller */
+  .qty .qtyInput{ width:160px !important; }
+}
+
+/* Simplified popup: make inputs match main form boxes */
+#catalogSimple input { 
+  min-height: var(--inp-h) !important;
+  font-size: 16px !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  width: 100%;
+}
+#catalogSimple .row { align-items: center; }
+#catalogSimple #csTypeActions { justify-content: flex-end; }
+
+/* === Tweaks per user request === */
+/* Bigger manage popup */
+.manage#catalogSimple{ width:min(840px, 90vw); }
+.manage#catalogSimple .dd{ max-height:320px !important; } /* show ~5+ items */
+
+/* Inputs in manage popup styled like Due/Number boxes */
+#catalogSimple input{ 
+  min-height: var(--inp-h) !important;
+  padding: 10px 12px !important;
+  border-radius: var(--inp-r) !important;
+  border: var(--inp-b) solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  width: 100%;
+}
+
+/* Manage Contacts inputs look like 'Due' box */
+#manageContacts input{
+  min-height: var(--inp-h);
+  padding: 10px 12px;
+  border-radius: var(--inp-r);
+  border: var(--inp-b) solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* === Fix: Model input collapsing + long Save button ======================= */
+/* Apply only to model lists in both popups */
+#csModelsList .rowitem, #mmList .rowitem{
+  display: grid !important;
+  grid-template-columns: minmax(140px,1fr) auto auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+/* Hide the two placeholder spans used in original 5-col grid */
+#csModelsList .rowitem span, #mmList .rowitem span{ display:none !important; }
+/* Ensure the text input uses the full first column and doesn't shrink weirdly */
+#csModelsList .rowitem input, #mmList .rowitem input{
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Make Save/Delete compact pills and prevent stretching */
+#csModelsList .rowitem .save, #mmList .rowitem .save,
+#csModelsList .rowitem .del,  #mmList .rowitem .del{
+  width: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px 14px !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+/* === Manage Contacts fixes (mobile + desktop) ============================= */
+/* 1–4: Balanced inputs + consistent pill buttons */
+#manageContacts .rowitem{
+  display: grid !important;
+  grid-template-columns: 1.2fr 1fr 1.2fr auto auto !important; /* Name | Phone | Address | Save | Delete */
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Inputs take full space of their columns and don't collapse */
+#manageContacts .rowitem input{
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Buttons: compact pill, equal sizing */
+#manageContacts .rowitem .save,
+#manageContacts .rowitem .del{
+  padding: 10px 16px !important;
+  min-width: 90px !important;
+  height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+/* 5: Show Save/Delete only when editing (focus within row) */
+#manageContacts .rowitem .save,
+#manageContacts .rowitem .del{ display: none !important; }
+#manageContacts .rowitem:focus-within .save,
+#manageContacts .rowitem:focus-within .del{ display: inline-flex !important; }
+
+/* Mobile: keep the three inputs readable; buttons still inline */
+@media (max-width: 640px){
+  #manageContacts .rowitem{ grid-template-columns: 1.1fr 1fr 1.1fr auto auto !important; } 
+  #manageContacts .rowitem .save,
+  #manageContacts .rowitem .del{ min-width: 84px !important; height: 38px !important; padding: 8px 14px !important; }
+}
+
+/* === Show Save/Delete only when row is focused (Types + Models) ========== */
+#mtList .rowitem .save, #mtList .rowitem .del,
+#mmList .rowitem .save, #mmList .rowitem .del,
+#csModelsList .rowitem .save, #csModelsList .rowitem .del{
+  display: none !important;
+}
+#mtList .rowitem:focus-within .save, #mtList .rowitem:focus-within .del,
+#mmList .rowitem:focus-within .save, #mmList .rowitem:focus-within .del,
+#csModelsList .rowitem:focus-within .save, #csModelsList .rowitem:focus-within .del{
+  display: inline-flex !important;
+}
+
+/* === Desktop fix: model row Save/Delete side-by-side (no stretching) ====== */
+#manageCatalog #mmList .rowitem{
+  display:grid !important;
+  grid-template-columns: 1fr auto auto !important; /* input | Save | Delete */
+  grid-auto-flow: column !important;
+  align-items:center !important;
+  gap:8px !important;
+}
+#manageCatalog #mmList .rowitem input{
+  width: 100% !important;
+  min-width: 0 !important;
+}
+#manageCatalog #mmList .rowitem .save,
+#manageCatalog #mmList .rowitem .del{
+  display:inline-flex !important;
+  width:auto !important;
+  max-width: fit-content !important;
+  padding:8px 14px !important;
+  border-radius:999px !important;
+  white-space:nowrap !important;
+  justify-self:end !important;
+}
+
+/* === Ensure Manage Product Types & Models modal is tall =================== */
+#manageCatalog{
+  top: 4vh !important;
+  max-height: 92vh !important;
+  min-height: 70vh !important;
+}
+#manageCatalog .content, #manageCatalog .list{
+  max-height: 70vh !important;
+  overflow: auto !important;
+}
+
+/* === Solid background for type dropdown options (all devices) ============ */
+#manageCatalog .dropdown{
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 24px rgba(2,6,23,.08) !important;
+}
+#manageCatalog .dropdown .dd-item{
+  background: #ffffff !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+#manageCatalog .dropdown .dd-item:hover{ background:#f8fafc !important; }
+
+/* === Simple Catalog modal: taller + scrollable ============================ */
+#catalogSimple{
+  top: 4vh !important;
+  max-height: 92vh !important;
+  min-height: 70vh !important;
+}
+#catalogSimple .row,
+#catalogSimple .list{
+  /* make internal sections scroll independently when long */
+  max-height: 70vh !important;
+  overflow: auto !important;
+}
+
+/* === Solid background + taller list for options under the search bar ====== */
+#catalogSimple .dd{
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 24px rgba(2,6,23,.08) !important;
+  max-height: 60vh !important;   /* show lots of choices; allow scrolling */
+  overflow: auto !important;
+}
+#catalogSimple .dd .dd-item{
+  background: #ffffff !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+#catalogSimple .dd .dd-item:hover{ background:#f8fafc !important; }
+</style>
+<style>
+/* === Fix: ensure dropdown visible (no clipping) ========================== */
+#catalogSimple { overflow: auto !important; }  /* modal scrolls itself */
+#catalogSimple .row{ 
+  max-height: none !important; 
+  overflow: visible !important;   /* don't clip absolute dropdown */
+}
+#catalogSimple .dd{
+  position: absolute !important;
+  z-index: 2000 !important;       /* above modal content */
+}
+#csTypeDD{ z-index: 2001 !important; }         /* specifically for type list */
+</style><style>
+/* === Adjust modal height to match list height ============================ */
+#catalogSimple{
+  height: auto !important;
+  max-height: none !important;
+}
+#catalogSimple .dd{
+  max-height: 320px !important; /* same as desired list height */
+}
+</style><style>
+/* === Shrink modal to content: remove tall inner caps ===================== */
+#catalogSimple .row,
+#catalogSimple .list{
+  max-height: unset !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+#catalogSimple{
+  height: auto !important;
+  max-height: none !important;
+  top: 8vh !important;           /* slight breathing room from top */
+}
+</style>
+<style id="nrt-upgrade-20250816">
+/* === User-requested mobile Saved Entries fix === */
+@media (max-width: 640px){
+  .saved-card{ flex-wrap: wrap !important; align-items: flex-start !important; }
+  .saved-card > .spacer{ flex-basis: 100% !important; }
+  /* Put Receipt below Edit/Delete (new line) */
+  .saved-card .rec{ flex-basis: 100% !important; order: 3 !important; }
+}
+
+/* === User-requested field width match === */
+/* Make Invoice Number and Grand Total inputs same min-width as Due */
+#invoice, #grand{ min-width: 180px !important; }
+
+</style>
+<style id="nrt-upgrade-20250816b">
+/* === Saved Entries: Button sizing & alignment === */
+.saved-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.saved-card button {
+  flex: 1 1 auto !important;
+  min-width: unset !important;
+}
+.saved-card .rec {
+  flex: 1 1 auto !important;
+}
+
+/* === Invoice Number same width as Number field === */
+#invoice {
+  width: 100% !important;
+}
+
+/* === Grand Total same width as Due field === */
+#grand {
+  width: 100% !important;
+}
+
+</style>
+<style id="nrt-upgrade-20250816b">
+/* === Saved Entries: Equal button sizes on one line === */
+.saved-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.saved-card button {
+  flex: 1 1 auto !important;
+  min-width: unset !important;
+}
+.saved-card .rec {
+  flex: 1 1 auto !important;
+}
+
+/* === Invoice Number matches Number field width === */
+#invoice {
+  width: 100% !important;
+}
+
+/* === Grand Total matches Due field width === */
+#grand {
+  width: 100% !important;
+}
+
+</style>
+<style id="nrt-upgrade-20250816c">
+/* === Saved Entries: keep 3 buttons on one line, equal size to each other === */
+.saved-card{ display:flex !important; align-items:center !important; gap:10px !important; }
+.saved-card .spacer{ flex:1 1 auto !important; }
+.saved-card button{ flex:0 0 auto !important; }      /* auto width like standard buttons */
+.saved-card .rec{ order:unset !important; flex:0 0 auto !important; }  /* undo previous full-width */
+
+/* === Invoice Number same visual width as Number === */
+#invoice{ width:100% !important; }  /* input stretches to column width */
+
+/* === Grand Total same visual width as Due === */
+#grand{ width:100% !important; }    /* input stretches to wrapper width */
+</style>
+<style>
+/* === Clean inline look: items table with only input borders === */
+#itemsTable { border-collapse: separate; border-spacing: 0 8px; }
+#itemsTable th, #itemsTable td { 
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 6px 6px !important;
+}
+#itemsTable .qty {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+#itemsTable .qty input { height: 34px !important; }
+#itemsTable .qty button { padding: 4px 8px !important; }
+</style><style>
+/* Remove arrows/spinners from number inputs across browsers */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+</style>
+<style id="nrt-fix-20250818">
+/* CHG-001: keep action buttons at far right (desktop) */
+@media (min-width: 1024px){
+  .saved-card{ display:flex !important; align-items:center !important; }
+  .saved-card .spacer{ margin-right: 12px !important; flex:1 1 auto !important; }
+  .saved-card .row-actions{ display:flex !important; gap:8px !important; margin-left:auto !important; white-space:nowrap !important; flex-wrap:nowrap !important; min-width:fit-content !important; }
+  .saved-card .row-actions .btn{ flex:0 0 auto !important; }
+}
+
+/* CHG-002: Saved Entries search bar full-width on mobile */
+@media (max-width: 600px){
+  #savedSearch{ width:100% !important; min-width:100% !important; flex:1 1 100% !important; }
+}
+
+/* CHG-006: On mobile, keep Clear/View Dues/Export on one line */
+.saved-actions{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; }
+@media (max-width: 600px){
+  .saved-actions{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .saved-actions .btn{ padding:10px 12px !important; }
+}
+/* ========================================================================== */
+/* CHG-004 header layout */
+.titlebar{ display:flex !important; align-items:center !important; justify-content:space-between !important; gap:12px !important; }
+.titlebar .title-actions .row{ gap:10px; }
+</style>
+<style id="nrt-shared-header-parity">
+/* Shared header layout + button parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so iOS/Android don’t baseline-shift them */
+.titlebar .title-actions .btn{ line-height:1; padding:10px 14px; margin:0; }
+@media (min-width:600px){ .titlebar{ min-height:64px; } } /* steady header height */
+/* Remove page-specific offsets */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+/* Global no-horizontal-scroll safeguards */
+html, body { max-width: 100%; overflow-x: hidden; }
+.wrap, .card, table { max-width: 100%; }
+table{ table-layout: auto; }
+img, canvas, svg, video{ max-width: 100%; height: auto; display: block; }
+[class*="titlebar"], .toolbar, .sticky-foot{ max-width:100%; overflow-x:hidden; }
+</style><style id="nrt-header-parity-final">
+/* Shared header layout + parity */
+.titlebar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.titlebar .title{ display:flex; flex-direction:column; gap:4px; }
+.titlebar .title-actions{ display:flex; align-items:center; align-self:center; }
+.titlebar .title-actions .row{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+/* Normalize pill buttons so they don't sit low */
+.titlebar .title-actions .btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  line-height:1; padding:10px 16px; height:38px; border-radius:12px; margin:0;
+}
+/* Keep header height steady */
+@media (min-width:600px){ .titlebar{ min-height:64px; } }
+/* Nuke any legacy vertical offset */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+</style>
+<style id="nrt-inventory-header-styles">
+/* Exact Inventory header look, scoped to <header> only */
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:14px 16px;background:#fff;border-radius:14px;box-shadow:0 10px 28px rgba(2,6,23,.08)}
+header h1{font-size:22px;margin:0}
+header .sub{color:#64748b;font-weight:500;font-size:13px}
+header .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+header .btn{appearance:none;border:0;background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 10px 28px rgba(2,6,23,.08)}
+header .btn:active{transform:translateY(1px)}
+header .btn.ghost{background:#eef2ff;color:#1e3a8a}
+</style>
+<style id="nrt-header-fix-20250818">
+/* Force Inventory header parity everywhere */
+header{display:flex !important; align-items:center !important; justify-content:space-between !important; margin-bottom:18px !important; padding:14px 16px !important; background:#fff !important; border-radius:14px !important; box-shadow:0 10px 28px rgba(2,6,23,.08) !important;}
+header h1{font-size:22px !important; margin:0 !important;}
+header .sub{color:#64748b !important; font-weight:500 !important; font-size:13px !important;}
+header .row{display:flex !important; gap:10px !important; flex-wrap:wrap !important; align-items:center !important;}
+header .btn{appearance:none !important; border:0 !important; background:#2563eb !important; color:#fff !important; padding:10px 14px !important; border-radius:10px !important; font-weight:700 !important; cursor:pointer !important; box-shadow:0 10px 28px rgba(2,6,23,.08) !important; line-height:1 !important; height:auto !important; min-height:auto !important;}
+header .btn.ghost{background:#eef2ff !important; color:#1e3a8a !important;}
+</style>
+<style id="nrt-header-64">/* Unified header height and layout across pages */header{min-height:64px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;}header .row, header .title-actions .row{display:flex !important;gap:12px !important;align-items:center !important;flex-wrap:nowrap !important;}</style><style id="pc-desktop-lock-1100">
+/* === Desktop: lock to original app width (approx like your screenshot) === */
+:root{ --app-desktop-maxw: 1100px; }  /* adjust to 1000–1200px if you prefer */
+
+@media (min-width: 1280px){
+  .wrap{
+    max-width: var(--app-desktop-maxw) !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* === Tables: keep header/body perfectly aligned ========================= */
+#itemsTable, #inventoryTable{
+  table-layout: fixed !important;
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+#itemsTable th, #itemsTable td,
+#inventoryTable th, #inventoryTable td{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* optional helpers */
+.right{ text-align: right !important; }
+.center{ text-align: center !important; }
+</style><style id="nrt-fixes-20250819">
+/* === Alignment & behavior fixes (2025-08-19) =========================== */
+/* Keep natural column sizing; action column compact */
+#itemsTable { table-layout: auto !important; }
+#itemsTable th:last-child, #itemsTable td:last-child { width: 1%; white-space: nowrap; }
+/* Center the Qty header and its column */
+#itemsTable thead th:nth-child(3){ text-align:center !important; }
+#itemsTable tbody td:nth-child(3){ text-align:center !important; }
+/* Make sure dropdowns can overlay */
+.dropdown{ z-index: 9999 !important; }
+.card{ overflow: visible !important; }
+/* ====================================================================== */
+</style><style id="nrt-fixes-20250819-b">
+/* === 2025-08-19: dropdown reliability & layout tweaks =================== */
+.combo{ overflow: visible !important; }          /* dropdown inside combo shouldn't be clipped */
+.wrap, .section{ overflow: visible !important; } /* allow absolutely positioned menus to show */
+/* ======================================================================= */
+</style>
+<style id="nrt-dropdown-portalizer-css">
+/* Ensure any dropdown can float above surrounding content */
+.dropdown{ z-index: 99999 !important; }
+.combo, .search, .section, .card, .wrap{ overflow: visible !important; }
+/* Prevent tables from clipping children */
+table, tbody, tr, td, th{ overflow: visible !important; }
+</style>
+
+<style id="nrt-ios-toast-css">
+/* iOS-style top notification (like iPhone banners) */
+#nrt-ios-toast {
+  position: fixed;
+  left: 50%;
+  top: env(safe-area-inset-top, 8px);
+  transform: translateX(-50%) translateY(-120%);
+  min-width: min(520px, calc(100vw - 24px));
+  background: rgba(255,255,255,.98);
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(2,6,23,.18);
+  padding: 10px 14px;
+  z-index: 999999;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  transition: transform .32s cubic-bezier(.2,.9,.2,1);
+  font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Inter, Arial;
+}
+#nrt-ios-toast.show { transform: translateX(-50%) translateY(0); }
+#nrt-ios-toast .icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 900;
+  background: #eef2ff; color:#3730a3;
+}
+#nrt-ios-toast .text { display:flex; flex-direction:column; line-height:1.2; }
+#nrt-ios-toast .title { font-weight: 800; font-size: 14px; }
+#nrt-ios-toast .subtitle { font-size: 12px; color:#475569; margin-top:2px; }
+#nrt-ios-toast .tick {
+  width: 20px; height: 20px; border-radius: 999px; border:2px solid #10b981;
+  display:grid; place-items:center; font-size:12px; color:#10b981; font-weight:900;
+}
+@media (max-width: 480px){
+  #nrt-ios-toast { min-width: calc(100vw - 16px); }
+}
+</style>
+
+
+<style id="nrt-saved-v5">
+#savedList{ display:grid !important; gap:16px !important; }
+#savedList .saved-card{
+  display:flex !important; gap:12px !important; align-items:flex-start !important;
+  border-radius:12px !important; overflow:hidden !important; flex-wrap:wrap !important;
+  padding:12px !important;
+}
+#savedList .saved-card .spacer{ flex:1 1 260px !important; min-width:0 !important; }
+#savedList .saved-card .row-actions{
+  display:flex !important; gap:10px !important; width:100% !important; flex-wrap:wrap !important;
+}
+#savedList .saved-card .row-actions .btn{ flex:1 1 0 !important; min-width:108px !important; }
+</style>
+
+
+<style id="nrt-catalog-v5">
+/* Ensure list is inline on the card for the Simple Catalog modal */
+#catalogSimple .row:has(#csSearch){ position:relative !important; }
+#csTypeDD, #catalogSimple .dd{
+  position:static !important;
+  width:100% !important;
+  margin-top:12px !important;
+  max-height:40vh !important; overflow:auto !important;
+  border:1px solid #e5e7eb !important; border-radius:12px !important;
+  box-shadow:none !important; background:#fff !important; padding:0 !important;
+}
+</style>
+
+
+
+
+
+
+
+
+<style id="nrt-modal-close-headerX">
+  #manageCatalog > .row:first-child,
+  #catalogSimple > .row:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-close{
+    all: unset;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-2px); /* nudge up a couple pixels */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .header-close:hover,
+  .header-close:focus {
+    background: transparent;
+    outline: none;
+    box-shadow: none;
+  }
+  @media (max-width:480px){
+    .header-close{
+      width: 44px;
+      height: 44px;
+      font-size: 30px;
+      transform: translateY(-1px); /* slightly smaller nudge on mobile */
+    }
+  }
+</style>
+
+  <link rel="prefetch" href="dashboard.html" as="document"/>
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" as="script" crossorigin>
+
+<style id="nrt-saved-virtualized">
+/* === Saved Entries: virtualized, scrollable viewport (2 cards tall) === */
+#savedViewport.saved-viewport{
+  max-height: calc(var(--saved-card-h, 180px) * 2 + 10px); /* ~2 cards tall */
+  overflow-y: auto;
+  border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+/* Keep cards visually same */
+#savedViewport .saved-card{ margin: 0 !important; }
+</style>
+
+</head>
+<body><div class="wrap">
+<div class="card">
+<header><div><h1>N.R.T.</h1><div class="sub">Record an Achievement</div></div><div class="row"><button class="btn ghost" onclick="location.href='dashboard.html'">Dashboard</button><button class="btn ghost" onclick="location.href='inventory.html'">Inventory</button></div></header>
+<!-- Primary form fields -->
+<div class="section grid g2">
+<div>
+<label>Date *</label>
+<input id="date" type="date"/>
+</div>
+<div>
+<label>Invoice Number</label>
+<input id="invoice" readonly=""/>
+</div>
+<div class="combo" style="grid-column:1 / -1;">
+<div class="row" style="justify-content:space-between; width:100%">
+<label>Name *</label>
+<button class="icon-btn" id="openManageContacts" title="Manage Contacts">
+<svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 20h9"></path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+</svg>
+</button>
+</div>
+<input id="contactSearch" placeholder="Search or add contact..." type="text"/>
+<div class="dropdown hidden" id="contactDD"></div>
+<div class="hidden" id="inlineAddContact" style="margin-top:6px;">
+<span class="chip">Add "<span id="inlineName"></span>"
+              <button class="btn ghost" id="inlineAddBtn" style="padding:4px 8px;margin-left:6px;" type="button">Open Manage</button>
+</span>
+</div>
+</div>
+<div>
+<label>Number</label>
+<input id="contactPhone" placeholder="Auto-filled from contact" readonly=""/>
+</div>
+<div>
+<label>Address</label>
+<input id="contactAddress" placeholder="Auto-filled from contact" readonly=""/>
+</div>
+</div>
+<!-- Line items -->
+<div class="section">
+<table id="itemsTable">
+<thead>
+<tr>
+<th>Product Type <button class="pill" id="openManageTypes" title="Manage Product Types" type="button">✎</button></th>
+<th>Model <button class="pill" id="openManageModels" title="Manage Models" type="button">✎</button></th>
+<th class="right">Qty</th>
+<th class="right">Price (BDT)</th>
+<th class="right">Line Total</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="itemsBody"></tbody>
+</table>
+<div class="row" style="margin-top:8px">
+<button class="btn warn" id="addItem" type="button">Add Item</button>
+<div class="spacer"></div>
+<div style="min-width:220px">
+<label>Due (optional)</label>
+<input id="due" min="0" step="1" type="number" value="0"/>
+</div>
+<div style="min-width:260px"><label>Discount (optional)</label><div class="combo-input"><input id="discountVal" min="0" placeholder="0" step="0.01" type="number"/><select id="discountType"><option value="%">%</option><option value="BDT">BDT</option></select></div></div><div style="min-width:220px">
+<label>Grand Total</label>
+<input id="grand" readonly="" value="0.00"/>
+</div>
+</div>
+</div>
+<div class="footer">
+<label class="chip"><input id="keepContact" style="margin-right:6px" type="checkbox"/> Keep contact after submit</label>
+<div class="spacer"></div>
+<button class="btn primary" id="submit" style="flex:1" type="button">Submit</button>
+<button class="btn ghost" id="clear" style="flex:1" type="button">Clear Form</button>
+</div>
+<!-- Manage Contacts -->
+<div class="section manage hidden" id="manageContacts">
+<div class="row" style="justify-content:space-between; margin-bottom:6px">
+<strong>Manage Contacts</strong>
+<button class="btn gray" id="closeManageContacts" type="button">Close</button>
+</div>
+<div class="row" style="margin-bottom:10px">
+<input class="rowitem-input" id="mcName" placeholder="Store Name"/>
+<input class="rowitem-input" id="mcPhone" placeholder="01XXXXXXXXX or +88"/>
+<input class="rowitem-input" id="mcAddr" placeholder="Address"/>
+<button class="btn primary" id="mcAdd" type="button">Add</button>
+</div>
+<div class="list" id="mcList"></div>
+</div>
+<!-- Manage Catalog (Types + Models together) -->
+<div class="manage hidden" id="manageCatalog">
+<div class="row" style="justify-content:space-between; margin-bottom:6px"><strong>Manage Product Types &amp; Models</strong><button class="header-close" id="closeManageCatalog" type="button" aria-label="Close">×</button></div>
+<div class="grid g2">
+<!-- Manage Types (unchanged inner controls) -->
+<div class="section" id="manageTypes" style="background:transparent;border:0;padding:0">
+<div class="row" style="justify-content:space-between; margin-bottom:6px">
+<strong>Manage Product Types</strong>
+<button class="btn gray" id="closeManageTypes" style="display:none" type="button">Close</button>
+</div>
+<div class="row" style="margin-bottom:10px">
+<input class="rowitem-input" id="mtSearch" placeholder="Search or add type"/>
+<button class="btn primary" id="mtAdd" type="button">Add</button>
+</div>
+<div class="list" id="mtList"></div>
+</div>
+<!-- Manage Models (unchanged inner controls) -->
+<div class="section" id="manageModels" style="background:transparent;border:0;padding:0">
+<div class="row" style="justify-content:space-between; margin-bottom:6px">
+<strong>Manage Models</strong>
+<button class="btn gray" id="closeManageModels" style="display:none" type="button">Close</button>
+</div>
+<div class="row" style="margin-bottom:10px">
+<input class="rowitem-input" id="mmSearch" placeholder="Search or add model"/>
+<button class="btn primary" id="mmAdd" type="button">Add</button>
+</div>
+<div class="list" id="mmList"></div>
+</div>
+</div>
+</div>
+<!-- Simplified Catalog Popup (non-invasive) -->
+<div class="manage hidden" id="catalogSimple">
+<div class="row" style="justify-content:space-between; margin-bottom:6px"><strong>Manage Product Types &amp; Models</strong><button class="header-close" id="csClose" type="button" aria-label="Close">×</button></div>
+<!-- 2: Only a search bar -->
+<div class="row" style="gap:8px; margin-bottom:10px; position:relative">
+<input class="rowitem-input" id="csSearch" placeholder="Search or add product type"/>
+<button class="btn primary" id="csTypeAdd" style="display:none" type="button">Add</button>
+<div class="dd hidden" id="csTypeDD" style="max-height:220px; overflow:auto; position:absolute; top:48px; left:0; right:0; z-index:5"></div>
+</div>
+<!-- 6: Edit/Delete for selected product -->
+<div class="row hidden" id="csTypeActions" style="gap:8px; margin-bottom:10px">
+<button class="btn primary" id="csTypeEdit" type="button">Save</button>
+<button class="btn danger" id="csTypeDelete" type="button">Delete</button>
+</div>
+<!-- 7: Models for selected product -->
+<div class="hidden" id="csModelsWrap">
+<div class="row" style="justify-content:space-between; margin-bottom:6px">
+<strong id="csModelsTitle">Models</strong>
+</div>
+<div class="list" id="csModelsList"></div>
+</div>
+<!-- 9: Add model box (only after adding a new product) -->
+<div class="row hidden" id="csModelAddWrap" style="gap:8px; margin-top:10px">
+<input class="rowitem-input" id="csModelInput" placeholder="Add a model"/>
+<button class="btn primary" id="csModelAdd" type="button">Add Model</button>
+</div>
+</div>
+<!-- Saved Entries -->
+<div class="section">
+<div class="row" style="justify-content:space-between; margin-bottom:6px">
+<strong>Saved Entries</strong>
+<div class="row">
+<input class="rowitem-input" id="savedSearch" placeholder="Search by name / phone / invoice / date" style="min-width:240px"/><div class="saved-actions"><button class="btn gray" id="clearFilters" type="button">Clear Filters</button><button class="btn ghost" id="viewDues" type="button">View Dues</button><button class="btn warn" id="exportCSV" type="button">Export (.csv)</button></div>
+</div>
+</div>
+<div id="savedViewport" class="saved-viewport"><div id="savedTopSpacer" style="height:0"></div><div class="grid" id="savedList" style="gap:10px"></div><div id="savedBottomSpacer" style="height:0"></div></div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+  // === Google Sheet Sync (rows) + Offline Queue ===
+  const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx-LF5EXHW0Zi2tYrsE61OVVPNlYHKzyVMw1uaNfhdX1CRsAEbmKBrft8N55dWHSG9ARg/exec';
+  const OFFLINE_Q_KEY = 'nrt_offline_queue';
+
+  function readQueue(){ try{ return JSON.parse(localStorage.getItem(OFFLINE_Q_KEY))||[]; }catch{ return []; } }
+  function writeQueue(q){ localStorage.setItem(OFFLINE_Q_KEY, JSON.stringify(q)); }
+
+  function rowsFromEntry(entry){
+    const rows = [];
+    (entry.items||[]).forEach(it => {
+      const total = Number(it.qty||0) * Number(it.price||0);
+      rows.push({
+        Invoice: entry.invoice,
+        Subtotal: Number(entry.subtotal||0),
+        DiscountType: entry.discountType || '%',
+        DiscountVal: Number(entry.discountVal||0),
+        Discount: Number(entry.discount||0),
+        Grand: Number(entry.grand||0),
+        Date: entry.date,
+        Name: entry.store,
+        Number: entry.phone || '',
+        Address: entry.address || '',
+        Product: it.type,
+        Model: it.model,
+        Quantity: Number(it.qty||0),
+        Price: Number(it.price||0),
+        Total: total,
+        Due: Number(entry.due||0)
+      });
+    });
+    return rows;
+  }
+
+  async function sendRows(rows){
+    try {
+      // Note: 'no-cors' returns an opaque response; we assume success if fetch resolves.
+      await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows })
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  
+  // Storage Keys
+  const K = {
+    contacts: 'nrt_contacts',
+    types: 'nrt_types',
+    models: 'nrt_models', // { type: [models] }
+    entries: 'nrt_entries_v2',
+    invoiceSeq: 'nrt_invoice_seq'
+  };
+
+  // Helpers
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const read = (k, d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
+  const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  const pad5 = n => String(n).padStart(5, '0');
+  const normPhone = (p)=>{
+    let d = String(p||'').replace(/\D/g,'');
+    if(d.startsWith('88') && d.length===13){ d = d.slice(2); }
+    return d;
+  };
+  const validBD = p => /^(?:\+?88)?01[3-9]\d{8}$/.test(String(p||'').trim());
+
+  // State
+  let mcExpandedIndex = null; // which contact row is expanded (index) or null
+  let contacts = read(K.contacts, []); // {name, phone, address}
+  let types = read(K.types, ['Phone Charger','Ear Buds','USB Cable','Ear Phone']);
+  let models = read(K.models, { 'Phone Charger':['20W','30W'], 'Ear Buds':['TWS-1'], 'USB Cable':['Type-C'], 'Ear Phone':['Wired'] });
+  
+  window.types = types; window.models = models;
+let entries = read(K.entries, []);
+
+  // Init invoice
+  function nextInvoiceFromSeq(){
+    let seq = Number(localStorage.getItem(K.invoiceSeq) || 0);
+    return 'nrt-inv-' + pad5(seq+1);
+  }
+  function bumpInvoice(){
+    let seq = Number(localStorage.getItem(K.invoiceSeq) || 0);
+    localStorage.setItem(K.invoiceSeq, String(seq+1));
+  }
+  $('#invoice').value = nextInvoiceFromSeq();
+
+  // Date default today
+  function today(){
+    const d=new Date();
+    const mm=String(d.getMonth()+1).padStart(2,'0');
+    const dd=String(d.getDate()).padStart(2,'0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+  $('#date').value = today();
+
+  // Contact combobox
+  const contactInput = $('#contactSearch');
+  const contactDD = $('#contactDD');
+  const inlineAdd = $('#inlineAddContact');
+  const inlineName = $('#inlineName');
+
+  function renderContactDD(list){
+    contactDD.innerHTML = '';
+    if(list.length===0){ contactDD.classList.add('hidden'); return; }
+    list.forEach((c)=>{
+      const div=document.createElement('div');
+      div.className='dd-item';
+      div.textContent = `${c.name} — ${c.phone||''}`.trim();
+      div.onclick = async ()=>{
+        contactInput.value = c.name;
+        $('#contactPhone').value = c.phone || '';
+        $('#contactAddress').value = c.address || '';
+        contactDD.classList.add('hidden');
+        inlineAdd.classList.add('hidden');
+      };
+      contactDD.appendChild(div);
+    });
+    contactDD.classList.remove('hidden');
+  }
+  function contactMatches(q){
+    q=q.toLowerCase();
+    return contacts.filter(c => c.name.toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.address||'').toLowerCase().includes(q));
+  }
+  function showAllContacts(){ renderContactDD(contacts); }
+
+  contactInput.addEventListener('focus', showAllContacts);
+  contactInput.addEventListener('click', showAllContacts);
+  document.addEventListener('click', (e)=>{
+    if(!contactDD.contains(e.target) && e.target!==contactInput){ contactDD.classList.add('hidden'); }
+  });
+  contactInput.addEventListener('input', ()=>{
+    const q = contactInput.value.trim();
+    renderContactDD(contactMatches(q));
+    const exists = contacts.some(c => c.name.toLowerCase() === q.toLowerCase());
+    if(q && !exists){ $('#inlineName').textContent = q; inlineAdd.classList.remove('hidden'); }
+    else{ inlineAdd.classList.add('hidden'); }
+  });
+  $('#openManageContacts').onclick = async ()=>{
+    if(!mcOutsideHandler){
+      mcOutsideHandler = (ev)=>{
+        if (performance.now() - mcJustExpandedAt < 200) return;
+        const mc = document.getElementById('manageContacts');
+        if(!mc || mc.classList.contains('hidden')) return;
+        const expanded = mc.querySelector('.rowitem.is-expanded');
+        if(!expanded) return;
+        if(expanded.contains(ev.target)) return;
+        mcExpandedIndex=null; renderManageContacts('');
+      };
+      document.addEventListener('click', mcOutsideHandler);
+    }
+ document.body.classList.add('has-modal'); $('#manageContacts').classList.remove('hidden'); mcExpandedIndex=null; renderManageContacts(''); };
+  $('#closeManageContacts').onclick = async ()=>{
+    if(mcOutsideHandler){
+      document.removeEventListener('click', mcOutsideHandler);
+      mcOutsideHandler = null;
+    }
+ $('#manageContacts').classList.add('hidden'); document.body.classList.remove('has-modal'); };
+  $('#inlineAddBtn').onclick = async ()=>{ $('#manageContacts').classList.remove('hidden'); $('#mcName').value = contactInput.value.trim(); mcExpandedIndex=null; renderManageContacts(''); inlineAdd.classList.add('hidden'); };
+
+  // Items
+  const body = $('#itemsBody');
+  // Track last focused product type from items table to target Manage Models Add
+  let lastFocusedType = '';
+  $('#itemsBody').addEventListener('focusin', (e)=>{
+    const tgt = e.target;
+    if(tgt && (tgt.classList.contains('typeInput') || tgt.classList.contains('modelInput'))){
+      const row = tgt.closest('tr');
+      const ti = row ? row.querySelector('.typeInput') : null;
+      lastFocusedType = ti ? (ti.value||'').trim() : lastFocusedType;
+    }
+  });
+  function addRow(pref={}){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>
+        <div class="combo">
+          <input class="typeInput" placeholder="Type">
+          <button class="mini-pencil" type="button" title="Manage Product Types">✎</button>
+          <div class="dropdown hidden"></div>
+        </div>
+      </td>
+      <td>
+        <div class="combo">
+          <input class="modelInput" placeholder="Model">
+          <button class="mini-pencil" type="button" title="Manage Models">✎</button>
+          <div class="dropdown hidden"></div>
+        </div>
+      </td>
+      <td class="right">
+        <div class="qty">
+          <button class="dec" type="button">−</button>
+          <input class="qtyInput" type="text" inputmode="numeric" pattern="[0-9]*" value="${pref.qty||1}">
+          <button class="inc" type="button">+</button>
+        </div>
+      </td>
+      <td class="right"><input class="priceInput" type="number" step="0.01" min="0" value="${pref.price||0}"></td>
+      <td class="right"><input class="lineTotal" readonly value="0.00"></td>
+      <td class="right"><button class="btn danger del" type="button">Del</button></td>
+    `;
+    body.appendChild(tr);
+    const typeI = tr.querySelector('.typeInput');
+    const typeDD = tr.querySelectorAll('.dropdown')[0];
+    const modelI = tr.querySelector('.modelInput');
+    const modelDD = tr.querySelectorAll('.dropdown')[1];
+
+    if(pref.type) typeI.value=pref.type;
+    if(pref.model) modelI.value=pref.model;
+
+    function renderTypeDD(q){
+      q=(q||'').toLowerCase();
+      const list = types.filter(t=>t.toLowerCase().includes(q)).map(t=>({label:t}));
+      typeDD.innerHTML='';
+      if(list.length===0){ typeDD.classList.add('hidden'); return; }
+      list.forEach(it=>{
+        const d=document.createElement('div'); d.className='dd-item'; d.textContent=it.label;
+        d.onclick = async ()=>{ typeI.value=it.label; lastFocusedType = it.label; typeDD.classList.add('hidden'); modelI.value=''; renderModelDD(''); };
+        typeDD.appendChild(d);
+      });
+      typeDD.classList.remove('hidden');
+    }
+    function renderModelDD(q){
+      q=(q||'').toLowerCase();
+      const ms = models[typeI.value] || [];
+      const list = ms.filter(m=>m.toLowerCase().includes(q)).map(m=>({label:m}));
+      modelDD.innerHTML='';
+      if(list.length===0){ modelDD.classList.add('hidden'); return; }
+      list.forEach(it=>{
+        const d=document.createElement('div'); d.className='dd-item'; d.textContent=it.label;
+        d.onclick = async ()=>{ modelI.value=it.label; modelDD.classList.add('hidden'); };
+        modelDD.appendChild(d);
+      });
+      modelDD.classList.remove('hidden');
+    }
+
+    typeI.addEventListener('focus', ()=>renderTypeDD(''));
+    typeI.addEventListener('click', ()=>renderTypeDD(typeI.value));
+    typeI.addEventListener('input', ()=>renderTypeDD(typeI.value));
+
+    modelI.addEventListener('focus', ()=>renderModelDD(''));
+    modelI.addEventListener('click', ()=>renderModelDD(modelI.value));
+    modelI.addEventListener('input', ()=>renderModelDD(modelI.value));
+
+    tr.querySelector('.dec').onclick = async ()=>{ const q=tr.querySelector('.qtyInput'); q.value=Math.max(1, (parseInt(q.value)||1)-1); recalcRow(tr); };
+    tr.querySelector('.inc').onclick = async ()=>{ const q=tr.querySelector('.qtyInput'); q.value=(parseInt(q.value)||1)+1; recalcRow(tr); };
+    tr.querySelector('.qtyInput').addEventListener('input', ()=>recalcRow(tr));
+    tr.querySelector('.priceInput').addEventListener('input', ()=>recalcRow(tr));
+    tr.querySelector('.del').onclick = async ()=>{ tr.remove(); recalcGrand(); };
+
+    recalcRow(tr);
+  }
+  function recalcRow(tr){
+    const q=Number(tr.querySelector('.qtyInput').value||0);
+    const p=Number(tr.querySelector('.priceInput').value||0);
+    tr.querySelector('.lineTotal').value = (q*p).toFixed(2);
+    recalcGrand();
+  }
+  function recalcGrand(){
+  let sum=0; $$('#itemsBody .lineTotal').forEach(x=> sum += Number(x.value||0));
+  let grand = sum;
+  const typeEl = document.getElementById('discountType');
+  const valEl  = document.getElementById('discountVal');
+  if(typeEl && valEl){
+    const t = typeEl.value || '%';
+    const v = Number(valEl.value||0);
+    if(v>0){
+      const disc = (t==='%' ? sum*v/100 : v);
+      grand = Math.max(0, sum - disc);
+    }
+  }
+  $('#grand').value = grand.toFixed(2);
+}
+function refreshContactDD(){
+  try{ 
+    const inp = document.getElementById('contactSearch'); 
+    const q = (inp && inp.value || '').trim();
+    const list = q ? contactMatches(q) : contacts;
+    renderContactDD(list);
+  }catch(e){ /*ignore*/ }
+}
+
+  $('#addItem').onclick = ()=> addRow();
+  // Recalc grand total live when discount fields change
+  const _dv = document.getElementById('discountVal');
+  const _dt = document.getElementById('discountType');
+  if(_dv){ _dv.addEventListener('input', recalcGrand); }
+  if(_dt){ _dt.addEventListener('change', recalcGrand); }
+
+  addRow();
+
+  
+  // Outside click handler for auto-shrink of expanded contact rows
+  let mcOutsideHandler = null;
+  let mcJustExpandedAt = 0;
+// Manage Contacts
+  
+
+function renderManageContacts(filter=''){
+    const list = $('#mcList'); list.innerHTML='';
+    const q=(filter||'').toLowerCase();
+    contacts
+      .filter(c => !q 
+          || (c.name||'').toLowerCase().includes(q) 
+          || (c.phone||'').includes(q) 
+          || (c.address||'').toLowerCase().includes(q))
+      .forEach((c,i)=>{
+        const row=document.createElement('div'); 
+        const isOpen = (typeof mcExpandedIndex==='number' && mcExpandedIndex===i);
+        row.className='rowitem' + (isOpen ? ' is-expanded' : '');
+        if(isOpen){
+          row.innerHTML = `<input value="${(c.name||'').replace(/"/g,'&quot;')}">
+            <input value="${(c.phone||'').replace(/"/g,'&quot;')}">
+            <input value="${(c.address||'').replace(/"/g,'&quot;')}">
+            <button class="btn primary save" type="button">Save</button>
+            <button class="btn danger del" type="button">Delete</button>`;
+          const [nm,ph,ad] = row.querySelectorAll('input');
+          row.querySelector('.save').onclick = async ()=>{
+            const n=nm.value.trim(), p=ph.value.trim(), a=ad.value.trim();
+            if(p && !validBD(p)){ alert('Phone must be a valid 11-digit Bangladeshi number'); return; }
+            if(p && contacts.some((cc,j)=> j!==i && normPhone(cc.phone)===normPhone(p))){ try{ nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){ console.log('Duplicate phone'); } return; }
+            contacts[i]={name:n||'(no name)', phone:p||'', address:a||''};
+            write(K.contacts, contacts);
+            // keep the same row open
+            mcExpandedIndex = i;
+            renderManageContacts(filter);
+            try{ const q=(document.getElementById('contactSearch')?.value||'').trim(); const list=(q? contactMatches(q):contacts); renderContactDD(list);}catch(_){ }
+          };
+          row.querySelector('.del').onclick = async ()=>{
+            if(!(await nrtConfirm('Delete this contact?'))) return;
+            contacts.splice(i,1); 
+            write(K.contacts, contacts);
+            mcExpandedIndex = null;
+            renderManageContacts(filter);
+            try{ const q=(document.getElementById('contactSearch')?.value||'').trim(); const list=(q? contactMatches(q):contacts); renderContactDD(list);}catch(_){ }
+          };
+        }else{
+          // Collapsed view: show only the number as a single line button
+          const numberLabel = (c.phone && c.phone.trim()) ? c.phone : '(no number)';
+          row.innerHTML = `<button class="btn gray expand" type="button" style="width:100%;justify-content:flex-start">${numberLabel}</button>`;
+          row.querySelector('.expand').addEventListener('click', ()=>{
+            mcJustExpandedAt = performance.now();
+            mcExpandedIndex = i; // open only this row; collapses others
+            renderManageContacts(filter);
+          });
+        }
+        list.appendChild(row);
+      });
+  }
+  $('#mcName').addEventListener('input', ()=> renderManageContacts($('#mcName').value));
+  $('#mcPhone').addEventListener('input', ()=> renderManageContacts($('#mcPhone').value));
+  $('#mcAddr').addEventListener('input', ()=> renderManageContacts($('#mcAddr').value));
+  $('#mcAdd').onclick = async ()=>{
+    const n=$('#mcName').value.trim();
+    const p=$('#mcPhone').value.trim();
+    const a=$('#mcAddr').value.trim();
+    if(!n || !p || !a){ alert('Please fill Store Name, Phone and Address.'); return; }
+    if(!validBD(p)){ alert('Phone must be a valid 11-digit Bangladeshi number'); return; }
+    if(contacts.some(c=> normPhone(c.phone)===normPhone(p))){ try{ nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){ console.log('Duplicate phone'); } return; }
+    contacts.unshift({name:n, phone:p, address:a});
+    write(K.contacts, contacts);
+    renderManageContacts();
+    try{ const q=(document.getElementById('contactSearch')?.value||'').trim(); const list=(q? contactMatches(q):contacts); renderContactDD(list);}catch(_){ }
+    $('#mcName').value=''; $('#mcPhone').value=''; $('#mcAddr').value='';
+  };
+
+
+  // Manage Types
+  function renderTypesManage(filter=''){
+    const list=$('#mtList'); list.innerHTML='';
+    const q=(filter||'').toLowerCase();
+    types.filter(t=>!q || t.toLowerCase().includes(q)).forEach((t,i)=>{
+      const row=document.createElement('div'); row.className='rowitem';
+      row.innerHTML=`<input value="${t}"><span></span><span></span>
+        <button class="btn primary save" type="button">Save</button>
+        <button class="btn danger del" type="button">Delete</button>`;
+      const nm=row.querySelector('input');
+      row.querySelector('.save').onclick = async ()=>{
+        const v=nm.value.trim(); if(!v) return;
+        if(types.map(x=>x.toLowerCase()).includes(v.toLowerCase()) && v.toLowerCase()!==t.toLowerCase()){ alert('Type exists'); return; }
+        if(models[t] && !models[v]){ models[v]=models[t]; delete models[t]; }
+        types[i]=v; write(K.types, types); write(K.models, models); renderTypesManage(filter);
+      };
+      row.querySelector('.del').onclick = async ()=>{ const del=types.splice(i,1)[0]; delete models[del]; write(K.types, types); write(K.models, models); renderTypesManage(filter); };
+      list.appendChild(row);
+    });
+  }
+  $('#mtSearch').addEventListener('input', ()=> renderTypesManage($('#mtSearch').value));
+  $('#mtAdd').onclick = async ()=>{
+    const v=$('#mtSearch').value.trim(); if(!v) return;
+    if(types.map(x=>x.toLowerCase()).includes(v.toLowerCase())){ alert('Type exists'); return; }
+    types.push(v); models[v]=models[v]||[]; write(K.types, types); write(K.models, models); renderTypesManage();
+    $('#mtSearch').value='';
+  };
+
+  // Manage Models
+  function renderModelsManage(filter=''){
+    const list=$('#mmList'); list.innerHTML='';
+    const q=(filter||'').toLowerCase();
+    Object.keys(models).sort().forEach(tp=>{
+      const head=document.createElement('div'); head.style.fontWeight='700'; head.textContent=tp; head.style.margin='6px 0';
+      list.appendChild(head);
+      (models[tp]||[]).filter(m=>!q || m.toLowerCase().includes(q)).forEach((m,idx)=>{
+        const row=document.createElement('div'); row.className='rowitem';
+        row.innerHTML=`<input value="${m}"><span></span><span></span>
+          <button class="btn primary save" type="button">Save</button>
+          <button class="btn danger del" type="button">Delete</button>`;
+        const nm=row.querySelector('input');
+        row.querySelector('.save').onclick = async ()=>{
+          const v=nm.value.trim(); if(!v) return;
+          if(models[tp].map(x=>x.toLowerCase()).includes(v.toLowerCase()) && v.toLowerCase()!==m.toLowerCase()){ alert('Model exists'); return; }
+          models[tp][idx]=v; write(K.models, models); renderModelsManage(filter);
+        };
+        row.querySelector('.del').onclick = async ()=>{ models[tp].splice(idx,1); write(K.models, models); renderModelsManage(filter); };
+        list.appendChild(row);
+      });
+    });
+  }
+
+  
+// Open/close manage panels (as modal)
+  let mcatalogOutsideHandler = null;
+  function openCatalog(){
+    if(!mcatalogOutsideHandler){
+      mcatalogOutsideHandler = (ev)=>{
+        const cat = document.getElementById('manageCatalog');
+        if(!cat || cat.classList.contains('hidden')) return;
+        const focused = cat.querySelector('.rowitem:focus-within');
+        if(!focused) return;
+        if(focused.contains(ev.target)) return;
+        // blur active input so :focus-within rules hide buttons
+        if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      };
+      document.addEventListener('click', mcatalogOutsideHandler);
+    }
+ document.body.classList.add('has-modal'); $('#manageCatalog').classList.remove('hidden'); renderTypesManage(''); renderModelsManage(''); }
+  function closeCatalog(){
+    if(mcatalogOutsideHandler){
+      document.removeEventListener('click', mcatalogOutsideHandler);
+      mcatalogOutsideHandler = null;
+    }
+ $('#manageCatalog').classList.add('hidden'); document.body.classList.remove('has-modal'); }
+  $('#openManageTypes').onclick = async ()=>{ openCatalog(); };
+  $('#closeManageTypes').onclick = ()=> closeCatalog();
+  $('#openManageModels').onclick = async ()=>{ 
+    // preserve lastFocusedType detection for add model
+    let tp = (lastFocusedType||'').trim();
+    if(!tp){
+      const active = document.activeElement;
+      if(active && active.closest && active.closest('#itemsBody tr')){
+        const ti = active.closest('#itemsBody tr').querySelector('.typeInput');
+        if(ti && ti.value.trim()) tp = ti.value.trim();
+      }
+    }
+    if(!tp){
+      const filled=[...document.querySelectorAll('#itemsBody .typeInput')].map(i=>i.value.trim()).filter(Boolean);
+      if(filled.length) tp = filled[filled.length-1];
+    }
+    lastFocusedType = tp;
+    openCatalog();
+  };
+  $('#closeManageModels').onclick = ()=> closeCatalog();
+  $('#closeManageCatalog').onclick = ()=> closeCatalog();
+// Manage Models – search & add
+  $('#mmSearch').addEventListener('input', ()=> renderModelsManage($('#mmSearch').value));
+  $('#mmAdd').onclick = async ()=>{
+    const model = ($('#mmSearch').value||'').trim();
+    if(!model) return;
+    // Determine target product type
+    let tp = (lastFocusedType||'').trim();
+    if(!tp){
+      const act=document.activeElement;
+      if(act && act.closest && act.closest('#itemsBody tr')){
+        const ti=act.closest('#itemsBody tr').querySelector('.typeInput');
+        if(ti && ti.value.trim()) tp = ti.value.trim();
+      }
+    }
+    if(!tp){
+      const filled = Array.from(document.querySelectorAll('#itemsBody .typeInput')).map(i=>i.value.trim()).filter(Boolean);
+      if(filled.length) tp = filled[filled.length-1];
+    }
+    if(!tp){ alert('Select a Product Type in the items table first.'); return; }
+    // Canonicalize type to managed casing
+    const canon = types.find(t => t.toLowerCase() === tp.toLowerCase()) || tp;
+    tp = canon;
+    models[tp] = models[tp] || [];
+    if(models[tp].map(x=>x.toLowerCase()).includes(model.toLowerCase())){ alert('Model exists for this type'); return; }
+    models[tp].push(model); write(K.models, models);
+    renderModelsManage($('#mmSearch').value);
+    $('#mmSearch').value = '';
+  };
+
+  
+
+// ===== Simplified Catalog Popup (safe; no other logic changed) =====
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  let csSelected = ''; // currently selected product type
+
+  function csReset(){
+    csSelected = '';
+    if($('#csSearch')) $('#csSearch').value = '';
+    if($('#csTypeAdd')) $('#csTypeAdd').style.display = 'none';
+    if($('#csTypeDD')) $('#csTypeDD').classList.add('hidden');
+    if($('#csTypeActions')) $('#csTypeActions').classList.add('hidden');
+    if($('#csModelsWrap')) $('#csModelsWrap').classList.add('hidden');
+    if($('#csModelsList')) $('#csModelsList').innerHTML = '';
+    if($('#csModelAddWrap')) $('#csModelAddWrap').classList.add('hidden');
+  }
+
+  let csOutsideHandler = null;
+  function csOpen(){
+    if(!csOutsideHandler){
+      csOutsideHandler = (ev)=>{
+        const cs = document.getElementById('catalogSimple');
+        if(!cs || cs.classList.contains('hidden')) return;
+        const focused = cs.querySelector('.rowitem:focus-within');
+        if(!focused) return;
+        if(focused.contains(ev.target)) return;
+        if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      };
+      document.addEventListener('click', csOutsideHandler);
+    }
+
+    document.body.classList.add('has-modal');
+    $('#catalogSimple').classList.remove('hidden');
+    csReset();
+  }
+  function csClose(){
+    if(csOutsideHandler){
+      document.removeEventListener('click', csOutsideHandler);
+      csOutsideHandler = null;
+    }
+
+    $('#catalogSimple').classList.add('hidden');
+    document.body.classList.remove('has-modal');
+  }
+
+  // Hook pencil icons to open simplified popup
+  if($('#openManageTypes'))  $('#openManageTypes').onclick  = csOpen;
+  if($('#openManageModels')) $('#openManageModels').onclick = csOpen;
+  if($('#csClose')) $('#csClose').onclick = csClose;
+
+  // Delegate mini pencil clicks (mobile) to open the manager
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if(t && t.classList && t.classList.contains('mini-pencil')){ csOpen(); }
+  });
+
+
+  // Show dropdown of existing products on focus/input
+  function csRenderTypeDD(filter=''){
+    const dd = $('#csTypeDD'); if(!dd) return;
+    const q = (filter||'').toLowerCase();
+    dd.innerHTML = '';
+    const list = (window.types||[]).filter(t => !q || t.toLowerCase().includes(q));
+    if(list.length === 0){ dd.classList.add('hidden'); return; }
+    list.forEach(t=>{
+      const item = document.createElement('div');
+      item.className = 'dd-item';
+      item.textContent = t;
+      item.onclick = ()=> csSelectType(t);
+      dd.appendChild(item);
+    });
+    dd.classList.remove('hidden');
+  }
+
+  function csSelectType(tp){
+    csSelected = tp;
+    if($('#csSearch')) $('#csSearch').value = tp;
+    if($('#csTypeAdd')) $('#csTypeAdd').style.display = 'none';
+    if($('#csTypeDD')) $('#csTypeDD').classList.add('hidden');
+    // Show actions
+    if($('#csTypeActions')) $('#csTypeActions').classList.remove('hidden');
+    // Show models
+    csRenderModels(tp);
+    if($('#csModelAddWrap')) $('#csModelAddWrap').classList.remove('hidden');
+  }
+
+  function csRenderModels(tp){
+    const wrap = $('#csModelsWrap'); const list = $('#csModelsList');
+    if(!wrap || !list) return;
+    list.innerHTML = '';
+    const arr = (window.models||{})[tp] || [];
+    arr.forEach((m, idx)=>{
+      const row = document.createElement('div');
+      row.className = 'rowitem';
+      row.innerHTML = `<input value="${m}"><span></span><span></span>
+        <button class="btn primary save" type="button">Save</button>
+        <button class="btn danger del" type="button">Delete</button>`;
+      const inp = row.querySelector('input');
+      row.querySelector('.save').onclick = async ()=>{
+        const v = (inp.value||'').trim(); if(!v) return;
+        const lower = arr.map(x=>x.toLowerCase());
+        if(lower.includes(v.toLowerCase()) && v.toLowerCase()!==m.toLowerCase()){ alert('Model exists'); return; }
+        arr[idx] = v; window.models[tp] = arr; localStorage.setItem('nrt_models', JSON.stringify(window.models)); csRenderModels(tp);
+      };
+      row.querySelector('.del').onclick = async ()=>{
+        arr.splice(idx,1); window.models[tp] = arr; localStorage.setItem('nrt_models', JSON.stringify(window.models)); csRenderModels(tp);
+      };
+      list.appendChild(row);
+    });
+    if($('#csModelsTitle')) $('#csModelsTitle').textContent = 'Models — ' + tp;
+    wrap.classList.remove('hidden');
+  }
+
+  // Search bar behavior (4,8)
+  if($('#csSearch')){
+    $('#csSearch').addEventListener('focus', ()=> csRenderTypeDD($('#csSearch').value));
+    $('#csSearch').addEventListener('input', ()=>{
+      const v = ($('#csSearch').value||'').trim();
+      const typesLower=(window.types||[]).map(x=>x.toLowerCase());
+      const exact=typesLower.includes(v.toLowerCase());
+      const isPrefixOfExisting=typesLower.some(t=> t.startsWith(v.toLowerCase()));
+      const showAdd = v && !exact && !isPrefixOfExisting;
+      if($('#csTypeAdd')) $('#csTypeAdd').style.display = showAdd ? 'inline-flex' : 'none';
+      csRenderTypeDD(v);
+    });
+  }
+
+  // 6: Save/Delete for product type
+  if($('#csTypeEdit')) $('#csTypeEdit').onclick = async ()=>{
+    const current = csSelected; if(!current) return;
+    const v = ($('#csSearch').value||'').trim(); if(!v) return;
+    if(v.toLowerCase()!==current.toLowerCase()){
+      const lower = (window.types||[]).map(x=>x.toLowerCase());
+      if(lower.includes(v.toLowerCase())){ alert('Type exists'); return; }
+      // rename
+      const idx = (window.types||[]).findIndex(t=>t===current);
+      if(idx>-1) window.types[idx] = v;
+      if(window.models[current]){ if(!window.models[v]) window.models[v] = window.models[current]; delete window.models[current]; }
+      localStorage.setItem('nrt_types', JSON.stringify(window.types));
+      localStorage.setItem('nrt_models', JSON.stringify(window.models));
+      csSelectType(v);
+    }
+  };
+  if($('#csTypeDelete')) $('#csTypeDelete').onclick = async ()=>{
+    const current = csSelected; if(!current) return;
+    if(!(await nrtConfirm('Delete product type and all its models?'))) return;
+    window.types = (window.types||[]).filter(t=>t!==current);
+    delete window.models[current];
+    localStorage.setItem('nrt_types', JSON.stringify(window.types));
+    localStorage.setItem('nrt_models', JSON.stringify(window.models));
+    csReset();
+  };
+
+  // 8–9: Add new product then show add model box
+  if($('#csTypeAdd')) $('#csTypeAdd').onclick = async ()=>{
+    const v = ($('#csSearch').value||'').trim(); if(!v) return;
+    const lower = (window.types||[]).map(x=>x.toLowerCase());
+    if(lower.includes(v.toLowerCase())) return;
+    window.types.push(v);
+    /* keep existing ref */
+    window.models[v] = window.models[v] || [];
+    localStorage.setItem('nrt_types', JSON.stringify(window.types));
+    localStorage.setItem('nrt_models', JSON.stringify(window.models));
+    csSelected = v;
+    if($('#csTypeActions')) $('#csTypeActions').classList.remove('hidden');
+    if($('#csModelsWrap')) $('#csModelsWrap').classList.remove('hidden');
+    if($('#csModelAddWrap')) $('#csModelAddWrap').classList.remove('hidden');
+    if($('#csModelsTitle')) $('#csModelsTitle').textContent = 'Models — ' + v;
+    csRenderModels(v);
+  };
+
+  if($('#csModelAdd')) $('#csModelAdd').onclick = async ()=>{
+    const tp = csSelected; if(!tp) return;
+    const m = ($('#csModelInput').value||'').trim(); if(!m) return;
+    window.models[tp] = window.models[tp] || [];
+    const lower = window.models[tp].map(x=>x.toLowerCase());
+    if(lower.includes(m.toLowerCase())){ alert('Model exists for this type'); return; }
+    window.models[tp].push(m);
+    localStorage.setItem('nrt_models', JSON.stringify(window.models));
+    $('#csModelInput').value='';
+    csRenderModels(tp);
+    if($('#csModelAddWrap')) $('#csModelAddWrap').classList.remove('hidden');
+  };
+})();
+// Saved entries rendering
+  
+
+
+// Load a saved entry back into the form for editing
+function loadEntryForEdit(invoice){
+  try{
+    const all = read(K.entries, []) || [];
+    const entry = all.find(x=> String(x.invoice)===String(invoice));
+    if(!entry) return;
+
+    // Header
+    const d = document.getElementById('date'); if(d) d.value = entry.date || '';
+    const inv = document.getElementById('invoice'); if(inv) inv.value = entry.invoice || '';
+
+    // Contact (flat fields on entry)
+    const cs = document.getElementById('contactSearch'); if(cs) cs.value = entry.store || '';
+    const cp = document.getElementById('contactPhone'); if(cp) cp.value = entry.phone || '';
+    const ca = document.getElementById('contactAddress'); if(ca) ca.value = entry.address || '';
+
+    // Discount / Due / Grand
+    const dv = document.getElementById('discountVal'); if(dv) dv.value = Number(entry.discountVal||0);
+    const dt = document.getElementById('discountType'); if(dt) dt.value = entry.discountType || '%';
+    const due = document.getElementById('due'); if(due) due.value = Number(entry.due||0);
+    const grand = document.getElementById('grand'); if(grand) grand.value = Number(entry.grand||0).toFixed(2);
+
+    // Items
+    const body = document.getElementById('itemsBody');
+    if(body){
+      body.innerHTML = '';
+      (entry.items||[]).forEach(function(it){
+        if(typeof addRow === 'function'){
+          addRow({type: it.type, model: it.model, qty: it.qty, price: it.price});
+        }
+      });
+    }
+
+    if(typeof recalcGrand === 'function') recalcGrand();
+    try{ document.querySelector('.wrap').scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+  }catch(e){ console.error(e); }
+}
+function renderSaved(filter=''){
+  const GAP = 10; // matches grid gap
+  const viewport = $('#savedViewport');
+  const win = $('#savedList');
+  const topSpacer = $('#savedTopSpacer');
+  const bottomSpacer = $('#savedBottomSpacer');
+
+  // Source data
+  let data = read(K.entries, []) || [];
+  let list = data.slice();
+  if(window.__savedDuesOnly){ list = list.filter(e => Number(e.due||0) > 0); }
+  if(filter){
+    const q = filter.toLowerCase();
+    list = list.filter(e => 
+      (e.store||'').toLowerCase().includes(q) ||
+      (e.phone||'').toLowerCase().includes(q) ||
+      (e.invoice||'').toLowerCase().includes(q) ||
+      (e.date||'').toLowerCase().includes(q)
+    );
+  }
+  if(list.length===0){
+    win.innerHTML = '<div class="muted">No entries found.</div>';
+    topSpacer.style.height = '0px';
+    bottomSpacer.style.height = '0px';
+    return;
+  }
+  // newest first (as before)
+  list.reverse();
+
+  // Measure (or reuse) card height
+  if(!renderSaved._cardH){
+    const probeData = list[0] || {};
+    const probe = document.createElement('div');
+    probe.className = 'saved-card';
+    probe.style.position = 'absolute';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.innerHTML = `
+      <div class="spacer">
+        <div><strong>${probeData.store||'Name'}</strong> • ${probeData.phone||''}</div>
+        <div class="meta">${probeData.date||'2025-01-01'} • Invoice ${probeData.invoice||'nrt-inv-00000'} • Discount: BDT ${(Number(probeData.discount||0)).toFixed(2)} • Grand: BDT ${(Number(probeData.grand||0)).toFixed(2)} • Due: BDT ${(Number(probeData.due||0)).toFixed(2)}</div>
+      </div>
+      <div class="row-actions">
+        <button class="btn gray edit" type="button">Edit</button>
+        <button class="btn danger del" type="button">Delete</button>
+        <button class="btn primary rec" type="button">Receipt</button>
+      </div>`;
+    document.body.appendChild(probe);
+    renderSaved._cardH = Math.max(140, probe.getBoundingClientRect().height);
+    document.body.removeChild(probe);
+    document.documentElement.style.setProperty('--saved-card-h', renderSaved._cardH + 'px');
+  }
+  const CARD_H = renderSaved._cardH;
+  const viewportH = viewport.clientHeight || (CARD_H * 2 + GAP);
+  const VISIBLE = Math.max(2, Math.ceil(viewportH / (CARD_H + GAP)));
+  const BUFFER = 4;
+  const TOTAL = list.length;
+
+  function drawSlice(scrollTop){
+    const firstIndex = Math.max(0, Math.floor(scrollTop / (CARD_H + GAP)));
+    const start = Math.max(0, firstIndex - BUFFER);
+    const end = Math.min(TOTAL, start + VISIBLE + BUFFER*2);
+
+    const topSpace = start * (CARD_H + GAP);
+    const bottomSpace = (TOTAL - end) * (CARD_H + GAP);
+    topSpacer.style.height = topSpace + 'px';
+    bottomSpacer.style.height = bottomSpace + 'px';
+
+    // Render only the window
+    win.innerHTML='';
+    for(let i=start; i<end; i++){
+      const e = list[i];
+      const div=document.createElement('div'); div.className='saved-card';
+      div.innerHTML = `
+        <div class="spacer">
+          <div><strong>${e.store}</strong> • ${e.phone||''}</div>
+          <div class="meta">${e.date} • Invoice ${e.invoice} • Discount: BDT ${(Number(e.discount||0)).toFixed(2)} • Grand: BDT ${(Number(e.grand||0)).toFixed(2)} • Due: BDT ${(Number(e.due||0)).toFixed(2)}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn gray edit" type="button" data-invoice="${e.invoice}">Edit</button>
+          <button class="btn danger del" type="button" data-invoice="${e.invoice}">Delete</button>
+          <button class="btn primary rec" type="button" data-invoice="${e.invoice}">Receipt</button>
+        </div>`;
+
+      // Actions (reused from previous implementation)
+      win.appendChild(div);
+    }
+  }
+
+  // Attach a single scroll listener (idempotent)
+  if(!viewport._virtBound){
+    viewport.addEventListener('scroll', ()=>{
+      if(!viewport._tick){
+        viewport._tick = true;
+        requestAnimationFrame(()=>{
+          drawSlice(viewport.scrollTop);
+          viewport._tick = false;
+        });
+      }
+    });
+    viewport._virtBound = true;
+  }
+
+  // Initial draw
+  drawSlice(viewport.scrollTop||0);
+}
+
+// --- Delegated click handling for Saved Entries (Edit/Delete/Receipt) ---
+(function(){
+  const savedListEl = document.getElementById('savedList');
+  if (savedListEl && !savedListEl.__delegated) {
+    savedListEl.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('button');
+      if(!btn) return;
+      const invoice = btn.getAttribute('data-invoice');
+      if(btn.classList.contains('del')){
+        (async ()=>{
+          try{
+            const ok = await (window.nrtConfirm ? nrtConfirm('Delete this entry?') : Promise.resolve(confirm('Delete this entry?')));
+            if(!ok) return;
+            let arr = read(K.entries, []) || [];
+            arr = arr.filter(x=> String(x.invoice) !== String(invoice));
+            write(K.entries, arr);
+            renderSaved(document.getElementById('savedSearch')?.value?.trim() || '');
+          }catch(e){ console.error(e); }
+        })();
+        ev.stopPropagation();
+        return;
+      }
+      if(btn.classList.contains('edit')){
+        loadEntryForEdit(invoice);
+        document.getElementById('savedViewport').scrollTop = 0;
+        return;
+      }
+      if(btn.classList.contains('rec')){
+        const entry = (read(K.entries, []) || []).find(x=> String(x.invoice)===String(invoice));
+        if(entry) generateReceiptPDF(entry);
+        return;
+      }
+    }, false);
+    savedListEl.__delegated = true;
+  }
+})();
+
+
+
+
+  $('#savedSearch').addEventListener('input', ()=> renderSaved($('#savedSearch').value.trim()));
+  $('#clearFilters').onclick = async ()=>{ window.__savedDuesOnly = false; $('#savedSearch').value=''; renderSaved(''); };
+  $('#viewDues').onclick = async ()=>{ window.__savedDuesOnly = true; renderSaved($('#savedSearch').value.trim()); };
+
+  if($('#dashboardBtn')) $('#dashboardBtn').onclick = async ()=>{ window.location.href = 'dashboard.html'; };
+
+
+  // Export CSV
+  
+  $('#exportCSV').onclick = async ()=>{
+    // Export one row per item with all form fields in requested order
+    const headers = ['Invoice','Date','Name','Number','Address','Product','Model','Quantity','Price','Total','Subtotal','DiscountType','DiscountVal','Discount','Grand','Due'];
+    const rows = [headers];
+    const data = read(K.entries, []);
+    data.forEach(e=>{
+      const phoneText = e.phone ? ("'" + String(e.phone)) : '';
+      (e.items||[]).forEach(i=>{
+        const total = Number(i.qty||0) * Number(i.price||0);
+        rows.push([e.invoice, e.date, e.store, phoneText, e.address||'', i.type, i.model, Number(i.qty||0), Number(i.price||0), total, Number(e.subtotal||0), (e.discountType||'%'), Number(e.discountVal||0), Number(e.discount||0), Number(e.grand||0), Number(e.due||0)]);
+      });
+    });
+    const esc = v => '"' + String(v).replace(/"/g,'""') + '"';
+    const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='nrt_entries.csv'; a.click();
+  };
+;
+
+  // Submit
+  $('#submit').onclick = async ()=>{
+    const date=$('#date').value.trim();
+    const invoice=$('#invoice').value.trim();
+    const name=$('#contactSearch').value.trim();
+    if(!date || !invoice || !name){ alert('Please fill date, invoice and shop name'); return; }
+    const phone=$('#contactPhone').value.trim();
+    const address=$('#contactAddress').value.trim();
+    const keep = $('#keepContact').checked;
+
+    const items=[];
+    $$('#itemsBody tr').forEach(tr=>{
+      const type=tr.querySelector('.typeInput').value.trim();
+      const model=tr.querySelector('.modelInput').value.trim();
+      // Validation: type & model must exist in managed lists
+      const typeOk = types.includes(type);
+      const modelsForType = models[type] || [];
+      const modelOk = modelsForType.includes(model);
+      if(!(typeOk && modelOk)){
+        alert('Each item must use a Product Type and Model from Manage lists.');
+        throw new Error('Invalid type/model');
+      }
+      const qty=Number(tr.querySelector('.qtyInput').value||0);
+      const price=Number(tr.querySelector('.priceInput').value||0);
+      if(type && model && qty>0){ items.push({type,model,qty,price,total:qty*price}); }
+    });
+    if(items.length===0){ alert('Please add at least one item'); return; }
+    const subtotal = items.reduce((s,i)=>s+i.total,0);
+    const discType = ($('#discountType') && $('#discountType').value) || '%';
+    const discVal  = ($('#discountVal') && Number($('#discountVal').value||0)) || 0;
+    const discount = discVal>0 ? (discType==='%' ? subtotal*discVal/100 : discVal) : 0;
+    const grand = Math.max(0, subtotal - discount);
+    const due=Number($('#due').value||0);
+
+    // Upsert contact by phone only (name/address can duplicate)
+    if(phone && !validBD(phone)){ if(!(await nrtConfirm('Phone looks invalid. Continue without saving phone?'))) return; }
+    if(phone){
+      const idx=contacts.findIndex(c=> normPhone(c.phone)===normPhone(phone));
+      if(idx>=0) contacts[idx]={name, phone, address}; else contacts.unshift({name, phone, address});
+      write(K.contacts, contacts);
+    try{ const q=(document.getElementById('contactSearch')?.value||'').trim(); const list=(q? contactMatches(q):contacts); renderContactDD(list);}catch(_){ }
+    } else {
+      const idx=contacts.findIndex(c=>c.name.toLowerCase()===name.toLowerCase() && !c.phone);
+      if(idx>=0) contacts[idx]={name, phone:'', address}; else contacts.unshift({name, phone:'', address});
+      write(K.contacts, contacts);
+    try{ const q=(document.getElementById('contactSearch')?.value||'').trim(); const list=(q? contactMatches(q):contacts); renderContactDD(list);}catch(_){ }
+    }
+
+    // Save entry
+    const entry={date, store:name, phone:phone||'', address, invoice, items, subtotal, discountType:discType, discountVal:discVal, discount, grand, due};
+    const existingIdx = entries.findIndex(x=> x.invoice === invoice);
+    const isEdit = existingIdx >= 0;
+    if(isEdit){ entries[existingIdx] = entry; } else { entries.push(entry); }
+    write(K.entries, entries);
+
+    
+    // === Send to Google Sheet (now or later) ===
+    (async () => {
+      const rows = rowsFromEntry(entry);
+      if (navigator.onLine) {
+        const ok = await sendRows(rows);
+        if (!ok) { const q = readQueue(); q.push({rows}); writeQueue(q); }
+      } else {
+        const q = readQueue(); q.push({rows}); writeQueue(q);
+      }
+    })();
+    
+    
+    // === Send to Google Sheet (flat JSON object) ===
+    (async () => {
+      const payload = {
+        Invoice: newEntry.invoiceNumber || '',
+        Date: newEntry.date || '',
+        Name: newEntry.storeName || '',
+        Number: newEntry.mobileNumber || '',
+        Address: newEntry.address || '',
+        Product: newEntry.gadgetType || '',
+        Model: newEntry.modelName || '',
+        Quantity: Number(newEntry.quantity || 0),
+        Price: Number(newEntry.sellingPrice || 0),
+        Total: Number(newEntry.totalRevenue || 0),
+        Subtotal: Number(newEntry.subtotal || 0),
+        DiscountType: newEntry.discountType || '%',
+        DiscountVal: Number(newEntry.discountVal || 0),
+        Discount: Number(newEntry.discount || 0),
+        Grand: Number(newEntry.grand || 0),
+        Due: Number(newEntry.due || 0)
+      };
+      if (navigator.onLine) {
+        try {
+          await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } catch (e) {
+          const q = JSON.parse(localStorage.getItem('nrt_offline_queue') || '[]');
+          q.push(payload);
+          localStorage.setItem('nrt_offline_queue', JSON.stringify(q));
+        }
+      } else {
+        const q = JSON.parse(localStorage.getItem('nrt_offline_queue') || '[]');
+        q.push(payload);
+        localStorage.setItem('nrt_offline_queue', JSON.stringify(q));
+      }
+    })();
+    alert(isEdit ? 'Updated' : 'Saved');
+
+    renderSaved($('#savedSearch').value.trim());
+
+    // bump invoice ONLY for new entries
+    if(!isEdit){ bumpInvoice(); }
+    $('#invoice').value = nextInvoiceFromSeq();
+    $('#date').value=''; // clear date as requested
+    $('#due').value='0';
+    $('#grand').value='0.00';
+    const body = $('#itemsBody'); body.innerHTML=''; addRow();
+    if(!keep){ $('#contactSearch').value=''; $('#contactPhone').value=''; $('#contactAddress').value=''; }
+  };
+
+  // Clear Form (should not bump invoice; also clears date)
+  $('#clear').onclick = async ()=>{
+    $('#date').value='';
+    $('#invoice').value = nextInvoiceFromSeq();
+    $('#due').value='0';
+    $('#discountVal').value='0';
+    if($('#discountType')) $('#discountType').value='%';
+    const body = $('#itemsBody'); body.innerHTML=''; addRow();
+    recalcGrand();
+    $('#contactSearch').value=''; $('#contactPhone').value=''; $('#contactAddress').value='';
+  };
+
+  // Initial renders (seed on first use for demo)
+  function initialRender(){
+    /* Contacts seeding removed per requirements: start with zero contacts on new installs. Existing data untouched. */
+    if(types.length===0){ types=['Phone Charger','Ear Buds','USB Cable','Ear Phone']; write(K.types, types); }
+    if(Object.keys(models).length===0){ models={'Phone Charger':['20W','30W'],'Ear Buds':['TWS-1'],'USB Cable':['Type-C'],'Ear Phone':['Wired']}; write(K.models, models); }
+    mcExpandedIndex=null; renderManageContacts('');
+    renderTypesManage('');
+    renderModelsManage('');
+    renderSaved('');
+  }
+  initialRender();
+})();
+
+// === UI polish: Show Add buttons only for *new* entries + hide stale dropdowns ===
+(function(){
+  const ciIncludes = (arr, v) => arr.map(x=>String(x).toLowerCase()).includes(String(v||'').toLowerCase());
+
+  // Types: toggle mtAdd
+  const mtI = document.getElementById('mtSearch');
+  const mtBtn = document.getElementById('mtAdd');
+  function toggleMt(){
+    if(!mtI || !mtBtn) return;
+    const v = (mtI.value||'').trim();
+    const isNew = v && !ciIncludes(types, v);
+    mtBtn.style.display = isNew ? 'flex' : 'none';
+  }
+  if(mtI){
+    mtI.addEventListener('input', toggleMt);
+    toggleMt();
+  }
+
+  // Models: toggle mmAdd – treat as new if not found in ANY model list
+  const mmI = document.getElementById('mmSearch');
+  const mmBtn = document.getElementById('mmAdd');
+  function allModelsFlat(){
+    return Object.values(models).flat();
+  }
+  function toggleMm(){
+    if(!mmI || !mmBtn) return;
+    const v = (mmI.value||'').trim();
+    const isNew = v && !ciIncludes(allModelsFlat(), v);
+    mmBtn.style.display = isNew ? 'flex' : 'none';
+  }
+  if(mmI){
+    mmI.addEventListener('input', toggleMm);
+    toggleMm();
+  }
+
+  // When user clicks Add (type or model), hide any open dropdown menus so
+  // stale suggestions from existing products don't linger.
+  ['mtAdd','mmAdd','csTypeAdd'].forEach(id=>{
+    const b = document.getElementById(id);
+    if(!b) return;
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('.dd').forEach(dd => dd.classList.add('hidden'));
+      // re-evaluate visibility after add (inputs are usually cleared by original logic)
+      setTimeout(()=>{ toggleMt(); toggleMm(); }, 0);
+    });
+  });
+
+  // Also when opening the catalog modal, ensure buttons reflect current input
+  const openOnce = setInterval(()=>{
+    const el = document.getElementById('manageCatalog');
+    if(el){ toggleMt(); toggleMm(); clearInterval(openOnce); }
+  }, 200);
+})();
+// === End UI polish ===========================================================
+</script>
+<script>
+
+// Ensure full-width Due & Grand wrappers on small screens (fallback for browsers without :has)
+function fixDueGrandLayout(){
+  try{
+    ['due','grand'].forEach(id=>{
+      const inp=document.getElementById(id);
+      if(!inp) return;
+      const wrap=inp.closest('div');
+      if(!wrap) return;
+      if(window.innerWidth<=820){
+        wrap.style.minWidth='100%';
+        wrap.style.flexBasis='100%';
+        wrap.style.width='100%';
+      }else{
+        wrap.style.minWidth='';
+        wrap.style.flexBasis='';
+        wrap.style.width='';
+      }
+    });
+  }catch(e){}
+}
+window.addEventListener('resize', fixDueGrandLayout);
+document.addEventListener('DOMContentLoaded', fixDueGrandLayout);
+
+
+
+// Global receipt/download interceptor
+document.addEventListener('click', function(ev){
+  const el = ev.target.closest('button, a');
+  if(!el) return;
+  const label = (el.textContent||'').trim().toLowerCase();
+  // ignore export csv button
+  if(label.includes('export')) return;
+  if(!(label.includes('receipt') || label === 'download' || el.classList.contains('rec'))) return;
+
+  // Find invoice from data attribute or nearby text
+  let inv = el.getAttribute('data-invoice');
+  if(!inv){
+    const card = el.closest('.saved-card') || document.getElementById('savedList') || document.body;
+    const text = (card.textContent||'');
+    const m = text.match(/Invoice\\s+([\\w-]+)/i);
+    if(m) inv = m[1];
+  }
+  if(!inv) return;
+
+  try{
+    const entries = JSON.parse(localStorage.getItem('nrt_entries_v2') || '[]');
+    const e = entries.find(x => String((x.invoice||'')).trim() === String(inv).trim());
+    if(e && typeof downloadReceiptPDF === 'function'){
+      ev.preventDefault(); ev.stopPropagation();
+      downloadReceiptPDF(e);
+      return false;
+    }
+  }catch(_){}
+}, true);
+
+</script>
+<script>document.getElementById('inventoryBtn')&& (document.getElementById('inventoryBtn').onclick = async ()=>{location.href='inventory.html'});</script>
+<!-- Auto-PDF dependencies (injected once) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+function downloadReceiptPDF(entry){
+  try{
+    // Create hidden container that won't cause reflow/flicker
+    const wrap = document.createElement('div');
+    wrap.id = 'nrt-pdf-receipt';
+    // Prevent layout shifts: fixed, invisible, no pointer events
+    wrap.style.cssText = [
+      'position:fixed','top:0','left:0','z-index:-1','opacity:0',
+      'width:794px','background:#fff','padding:28px',
+      'font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial'
+    ].join(';');
+
+    const safe = (v)=> (v==null? '' : String(v));
+
+    // Build Items rows
+    const itemsHtml = (entry.items||[]).map((i,idx)=>`
+      <tr>
+        <td>${idx+1}</td>
+        <td>${safe(i.type)}</td>
+        <td>${safe(i.model)}</td>
+        <td class="r">${Number(i.qty||0)}</td>
+        <td class="r">${Number(i.price||0).toFixed(2)}</td>
+        <td class="r">${Number(i.total || (Number(i.qty||0)*Number(i.price||0))).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const customerName = safe(entry.name || entry.customer || '');
+    const customerPhone = safe(entry.phone || entry.number || entry.mobile || '');
+    const customerAddr = safe(entry.address || '');
+
+    wrap.innerHTML = `
+      <style>
+        .hdr h1{margin:0;font-size:22px;font-weight:800;letter-spacing:0.2px}
+        .muted{color:#64748b}
+        .sec{margin-top:14px}
+        .label{font-size:12px;color:#64748b}
+        .value{font-weight:600}
+        .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 14px;margin-top:8px}
+        table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+        th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb}
+        thead th{background:#f8fafc;text-align:left}
+        .r{text-align:right}
+        .totals{margin-top:12px;display:grid;grid-template-columns:1fr 220px;gap:8px}
+        .totals .box{border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;background:#fbfdff}
+        .totals .box .line{display:flex;justify-content:space-between;margin:4px 0}
+        .grand{font-weight:800}
+        .sig{margin-top:60px;text-align:center;color:#6b7280;font-size:12px}
+        .sig .line{margin-top:28px;border-top:1px dashed #cbd5e1;width:260px;margin-left:auto;margin-right:auto;padding-top:6px}
+      </style>
+
+      <!-- Company Header (left-aligned) -->
+      <div class="hdr">
+        <h1>ChinoMart BD</h1>
+        <div class="muted">chinomartbd@gmail.com</div>
+        <div class="muted">Road 04, Shymoli, Sher-E-Bangla Nagar, Dhaka, Bangladesh</div>
+      </div>
+
+      <!-- Customer / Invoice Details -->
+      <div class="sec">
+        <div class="kv">
+          <div class="label">Invoice No.</div><div class="value">${safe(entry.invoice)}</div>
+          <div class="label">Date</div><div class="value">${safe(entry.date)}</div>
+          <div class="label">Customer Name</div><div class="value">${customerName}</div>
+          <div class="label">Phone</div><div class="value">${customerPhone}</div>
+          <div class="label">Address</div><div class="value">${customerAddr)}</div>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <div class="sec">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Product Type</th><th>Model</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Line Total</th></tr>
+          </thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div class="sec totals">
+        <div></div>
+        <div class="box">
+          <div class="line"><span>Discount</span><span>${Number(entry.discount||0).toFixed(2)}</span></div>
+          <div class="line grand"><span>Grand Total</span><span>${Number(entry.grand||0).toFixed(2)}</span></div>
+          <div class="line"><span>Due</span><span>${Number(entry.due||0).toFixed(2)}</span></div>
+        </div>
+      </div>
+
+      <!-- Signature centered -->
+      <div class="sig">
+        <div class="line">Authorized Signature</div>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+
+    // Render and save without layout shift
+    requestAnimationFrame(()=>{
+      html2canvas(wrap, {scale: 2, useCORS:true}).then(canvas => {
+        const img = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({orientation:'portrait', unit:'pt', format:'a4'});
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+        const w = canvas.width * ratio;
+        const h = canvas.height * ratio;
+        pdf.addImage(img, 'PNG', (pageW - w)/2, 24, w, h);
+        const name = (entry.invoice ? String(entry.invoice) : 'receipt') + '.pdf';
+        pdf.save(name);
+        try{ window.nrtIOSNotify && nrtIOSNotify({title:'Receipt Downloaded', subtitle:name, icon:'🧾', right:'✓'}); }catch(_){}
+        wrap.remove();
+      }).catch(()=>{ wrap.remove(); });
+    });
+  }catch(e){ console.error(e); }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script>
+function generateReceiptPDF(e){
+  const fmtBDT = (n) => `${Number(n||0).toFixed(2)} BDT`;
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'pt', format:'a4'});
+
+    const W = doc.internal.pageSize.getWidth();
+    let y = 36;
+
+    // Company Header (Top Left)
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('ChinoMart BD', 36, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    y += 16; doc.text('chinomartbd@gmail.com', 36, y);
+    y += 14; doc.text('Road 04, Shymoli, Sher-E-Bangla Nagar, Dhaka, Bangladesh', 36, y);
+
+    // Customer / Invoice Details
+    y += 26;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Invoice Details', 36, y);
+    y += 8; doc.setFont('helvetica','normal'); doc.setFontSize(11);
+
+    const kv = [
+      ['Invoice No.', String(e.invoice||'')],
+      ['Date', String(e.date||'')],
+      ['Customer Name', String(e.store || e.name || e.customer || '')],
+      ['Phone', String(e.phone||'')],
+      ['Address', String(e.address||'')],
+    ];
+    const leftX = 36, gapY = 16, labelW = 110;
+    kv.forEach(row => {
+      y += gapY;
+      doc.setFont('helvetica','normal'); doc.setTextColor(100);
+      doc.text(row[0], leftX, y);
+      doc.setFont('helvetica','bold'); doc.setTextColor(0);
+      doc.text(String(row[1]), leftX + labelW, y);
+    });
+
+    // Items Table
+    y += 18;
+    const rows = (e.items||[]).map((i, idx) => {
+      const qty = String(parseInt(i.qty||0, 10));           // Qty integer
+      const price = fmtBDT(i.price);
+      const total = fmtBDT((i.total!=null? i.total : Number(i.qty||0)*Number(i.price||0)));
+      return [ String(idx+1), String(i.type||''), String(i.model||''), qty, price, total ];
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['#','Product Type','Model','Qty','Price','Line Total']],
+      body: rows,
+      styles: { font:'helvetica', fontSize: 10, cellPadding: 6 },
+      theme: 'grid',
+      columnStyles: {
+        0: { halign:'left', cellWidth: 24 },
+        1: { halign:'left' },
+        2: { halign:'left' },
+        3: { halign:'right', cellWidth: 40 },
+        4: { halign:'right', cellWidth: 90 },
+        5: { halign:'right', cellWidth: 100 },
+      },
+      headStyles: { fillColor: [248,250,252], textColor: 0 },
+      didParseCell: function(data){
+        if(data.section === 'head'){
+          if([3,4,5].includes(data.column.index)) data.cell.styles.halign = 'right';
+          else data.cell.styles.halign = 'left';
+        }
+      }
+    });
+
+    let endY = doc.lastAutoTable ? doc.lastAutoTable.finalY : y + 18;
+
+    // Totals (right side box) with conditional rows
+    const boxX = W - 280 - 36;
+    const boxY = endY + 14;
+    const boxW = 280, boxPad = 10;
+
+    doc.setDrawColor(229,231,235); doc.setFillColor(251,253,255);
+    doc.roundedRect(boxX, boxY, boxW, 110, 6, 6, 'S');
+
+    const discount = Number(e.discount||0);
+    const due = Number(e.due||0);
+    const lines = [];
+    if (discount > 0) lines.push(['Discount', fmtBDT(discount)]);
+    lines.push(['Grand Total', fmtBDT(e.grand)]);
+    if (due > 0) lines.push(['Due', fmtBDT(due)]);
+
+    let ly = boxY + boxPad + 14;
+    lines.forEach(([label, val], i) => {
+      doc.setFont('helvetica', label==='Grand Total' ? 'bold':'normal'); doc.setFontSize(12);
+      doc.text(label, boxX + boxPad, ly);
+      doc.text(String(val), boxX + boxW - boxPad, ly, { align: 'right' });
+      ly += 18;
+    });
+
+    // Signature centered at bottom
+    const bottomY = Math.max(ly + 44, boxY + 150);
+    const cx = W/2;
+    doc.setDrawColor(203,213,225); doc.line(cx-130, bottomY, cx+130, bottomY);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text('Authorized Signature', cx, bottomY + 14, { align: 'center' });
+
+    const name = (e.invoice ? String(e.invoice) : 'receipt') + '.pdf';
+    doc.save(name);
+    try{ window.nrtIOSNotify && nrtIOSNotify({title:'Receipt Downloaded', subtitle:name, icon:'🧾', right:'✓'}); }catch(_){}
+  }catch(err){
+    console.error('PDF error', err);
+    try{ nrtIOSNotify({title:'Download Failed', subtitle:'Could not generate receipt PDF.', icon:'⚠️', right:'!'}); }catch(_){ alert('Could not generate receipt PDF.'); }
+  }
+}
+</script>
+<script id="nrt-dropdown-portalizer">
+(function(){
+  function isVisible(el){
+    return !!el && (el.offsetParent !== null || (getComputedStyle(el).position==='fixed' && el.getBoundingClientRect().width>0));
+  }
+  function isOpen(dd){
+    const s = getComputedStyle(dd);
+    return s.display !== 'none' && (dd.classList.contains('open') || s.visibility !== 'hidden');
+  }
+  function anchorOf(dd){
+    // Prefer closest .combo/.search; else previousElementSibling; else parent
+    let a = dd.closest('.combo,.search');
+    if(!a && dd.parentElement) a = dd.parentElement;
+    return a;
+  }
+  function place(dd){
+    const a = anchorOf(dd); if(!a) return;
+    const r = a.getBoundingClientRect();
+    dd.style.position = 'fixed';
+    dd.style.left = r.left + 'px';
+    dd.style.top  = (r.bottom + 6) + 'px';
+    dd.style.width = r.width + 'px';
+    dd.style.maxWidth = r.width + 'px';
+    dd.style.zIndex = '99999';
+  }
+  function tryPlace(dd){
+    if(!dd) return;
+    if(isOpen(dd)){ place(dd); }
+  }
+  function hook(container){
+    const dd = container.querySelector('.dropdown'); if(!dd) return;
+    // Capture focus/click/input to place
+    ['focus','click','input'].forEach(ev => {
+      container.addEventListener(ev, function(){ tryPlace(dd); }, true);
+    });
+    // Observe class/style changes (e.g., .open)
+    const obs = new MutationObserver(()=>tryPlace(dd));
+    obs.observe(dd, {attributes:true, attributeFilter:['class','style']});
+  }
+  function init(){
+    document.querySelectorAll('.combo,.search').forEach(hook);
+  }
+  // Global resize/scroll -> reposition any visible dropdowns
+  function repositionAll(){
+    document.querySelectorAll('.dropdown').forEach(dd => { if(isOpen(dd)) place(dd); });
+  }
+  window.addEventListener('resize', repositionAll, {passive:true});
+  window.addEventListener('scroll', repositionAll, {passive:true, capture:true});
+  // init now and also after DOM load just in case
+  try{ init(); }catch(e){}
+  document.addEventListener('DOMContentLoaded', init, {once:true});
+})();
+</script>
+<script id="nrt-close-dd-and-reset-discount">
+// Close Product Type/Model dropdowns when clicking anywhere else
+(function(){
+  function closeRowDropdowns(ev){
+    const target = ev.target;
+    // Only affect item-row dropdowns (not contact etc.)
+    document.querySelectorAll('#itemsBody .dropdown').forEach(dd => {
+      const combo = dd.closest('.combo');
+      if(!combo) return;
+      // If click is outside the combo (input + dropdown), hide
+      if(!combo.contains(target)){ dd.classList.add('hidden'); }
+    });
+  }
+  // Use mousedown so it fires before focus shifts
+  document.addEventListener('mousedown', closeRowDropdowns, true);
+})();
+
+// After Submit, reset discount controls like other fields
+(function(){
+  const btn = document.getElementById('submit');
+  if(btn){
+    btn.addEventListener('click', function(){
+      // Run after the original submit handler
+      setTimeout(function(){
+        const dv = document.getElementById('discountVal');
+        const dt = document.getElementById('discountType');
+        if(dv) dv.value = '0';
+        if(dt) dt.value = '%';
+        if(typeof recalcGrand === 'function') recalcGrand();
+      }, 0);
+    }, false);
+  }
+})();
+</script>
+
+<script id="nrt-ios-toast-js">
+(function(){
+  if(window.nrtIOSNotify) return;
+  function ensureNode(){
+    let node = document.getElementById('nrt-ios-toast');
+    if(!node){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<div id=\"nrt-ios-toast\" aria-live=\"polite\" aria-atomic=\"true\" style=\"display:none\">  <div class=\"icon\" id=\"nrt-ios-toast-icon\">⬇️</div>  <div class=\"text\">    <div class=\"title\" id=\"nrt-ios-toast-title\">Downloaded</div>    <div class=\"subtitle\" id=\"nrt-ios-toast-sub\">Your file is saved.</div>  </div>  <div class=\"tick\" id=\"nrt-ios-toast-right\">✓</div></div>`;
+      document.body.appendChild(wrap.firstElementChild);
+      node = document.getElementById('nrt-ios-toast');
+    }
+    return node;
+  }
+  function nrtIOSNotify({title="Done", subtitle="", icon="⬇️", right="✓", duration=2200}={}){
+    const node = ensureNode();
+    node.style.display = 'grid';
+    node.querySelector('#nrt-ios-toast-title').textContent = title;
+    node.querySelector('#nrt-ios-toast-sub').textContent = subtitle||"";
+    node.querySelector('#nrt-ios-toast-icon').textContent = icon||"";
+    node.querySelector('#nrt-ios-toast-right').textContent = right||"✓";
+    // show
+    requestAnimationFrame(()=> node.classList.add('show'));
+    clearTimeout(node._t);
+    node._t = setTimeout(()=>{
+      node.classList.remove('show');
+      // hide after transition
+      setTimeout(()=>{ node.style.display='none'; }, 400);
+    }, duration);
+  }
+  window.nrtIOSNotify = nrtIOSNotify;
+  // Optional: replace alert() with banner-styled error to match iPhone-like look
+  window.nrtAlert = function(msg){ nrtIOSNotify({title:"Notice", subtitle:String(msg||""), icon:"🔔", right:""}); };
+})();
+</script>
+
+
+<script>
+  // iPhone-style banner alerts
+  window.alert = function(msg){
+    if (typeof nrtIOSNotify === 'function') {
+      nrtIOSNotify({ title: 'Notice', subtitle: String(msg||''), icon: '🔔', right: '' });
+    } else {
+      // fallback
+      console.log('ALERT:', msg);
+    }
+  };
+</script>
+
+
+<style>
+/* iOS-style confirm sheet */
+#nrt-ios-confirm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:saturate(140%) blur(2px);display:none;align-items:center;justify-content:center;z-index:99999}
+#nrt-ios-confirm{width:min(94vw,420px);background:#f8f8fb;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;border:1px solid #e5e7eb}
+#nrt-ios-confirm .body{padding:18px 18px 8px;color:#0f172a}
+#nrt-ios-confirm .title{font-weight:700;font-size:16px;margin:0 0 6px}
+#nrt-ios-confirm .msg{font-size:14px;color:#374151;margin:0}
+#nrt-ios-confirm .actions{display:grid;grid-template-columns:1fr 1fr}
+#nrt-ios-confirm button{appearance:none;border:0;padding:14px 4px;font-weight:700;background:#fff}
+#nrt-ios-confirm button+button{border-left:1px solid #e5e7eb}
+#nrt-ios-confirm .cancel{color:#111827}
+#nrt-ios-confirm .ok{color:#0ea5e9}
+#nrt-ios-confirm .danger{color:#ef4444}
+</style>
+<script>
+(function(){
+  // Create confirm nodes once
+  function ensureConfirm(){
+    let back = document.getElementById('nrt-ios-confirm-backdrop');
+    if(!back){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+      <div id="nrt-ios-confirm-backdrop" role="dialog" aria-modal="true">
+        <div id="nrt-ios-confirm">
+          <div class="body">
+            <h3 class="title" id="nrt-confirm-title">Are you sure?</h3>
+            <p class="msg" id="nrt-confirm-msg"></p>
+          </div>
+          <div class="actions">
+            <button class="cancel" id="nrt-confirm-cancel">Cancel</button>
+            <button class="ok" id="nrt-confirm-ok">OK</button>
+          </div>
+        </div>
+      </div>`;
+      document.body.appendChild(wrap.firstElementChild);
+    }
+    return document.getElementById('nrt-ios-confirm-backdrop');
+  }
+  window.nrtConfirm = function(message, opts){
+    opts = opts||{};
+    const back = ensureConfirm();
+    back.style.display='flex';
+    document.getElementById('nrt-confirm-title').textContent = opts.title || 'Confirm';
+    document.getElementById('nrt-confirm-msg').textContent = message || '';
+    const okBtn = document.getElementById('nrt-confirm-ok');
+    const cancelBtn = document.getElementById('nrt-confirm-cancel');
+    okBtn.classList.toggle('danger', !!opts.danger);
+    okBtn.textContent = opts.okText || 'OK';
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
+    return new Promise((resolve)=>{
+      function cleanup(res){
+        back.style.display='none';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        back.removeEventListener('click', onBack);
+        resolve(res);
+      }
+      function onOk(e){ e.stopPropagation(); cleanup(true); }
+      function onCancel(e){ e.stopPropagation(); cleanup(false); }
+      function onBack(e){ if(e.target===back) cleanup(false); }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      back.addEventListener('click', onBack);
+    });
+  };
+  // Soft override window.confirm -> async; for legacy, fall back to native but also show banner
+  window.confirm = function(message){
+    // Try to blockless emulate synchronously using async then; consumers expecting boolean will receive true because JS can't block.
+    // To avoid breaking existing logic, we return true only if user clicks OK; otherwise false.
+    // We cannot truly block; but we can detect if caller uses the return synchronously. However in our code we migrate calls.
+    console.warn('window.confirm intercepted; use await nrtConfirm(message) for best behavior.');
+    var result = true;
+    // Show UI and set result accordingly after click, but we cannot delay return.
+    // Therefore return true but still show UI; our own code paths use await nrtConfirm.
+    try{ nrtConfirm(message).then(function(r){ result = r; }); }catch(e){}
+    return result;
+  };
+})(); 
+</script>
+
+
+<!-- NRT Unified UI Fixes (2025-08-23) -->
+<style id="nrt-unified-fixes">
+/* ===== 1) Header / Titlebar parity ===== */
+header, .titlebar{
+  min-height:64px !important;
+  display:flex !important; align-items:center !important; justify-content:space-between !important;
+  gap:12px !important;
+}
+.titlebar .title{ display:flex !important; flex-direction:column !important; gap:4px !important; }
+.titlebar .title-actions{ display:flex !important; align-items:center !important; gap:12px !important; flex-wrap:nowrap !important; }
+.titlebar .title-actions .btn{
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+  height:38px !important; padding:10px 16px !important; line-height:1 !important; border-radius:12px !important; margin:0 !important;
+}
+/* Prevent any legacy offsets */
+.titlebar .title-actions, .titlebar .title-actions .btn{ margin-top:0 !important; transform:none !important; }
+
+/* ===== 2) Inputs — standardized height/look ===== */
+:root{ --nrt-inp-h:46px; }
+input[type="text"], input[type="number"], input[type="date"], select{
+  min-height:var(--nrt-inp-h) !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  border:1px solid #e2e8f0 !important;
+  background:#fff !important;
+  color:#0f172a !important;
+  box-shadow:0 1px 2px rgba(15,23,42,.04) !important;
+  font-size:14px !important;
+}
+input[readonly]{
+  background:#fff !important; color:#0f172a !important; opacity:1 !important;
+  min-height:var(--nrt-inp-h) !important; border:1px solid #e2e8f0 !important;
+}
+/* Focus */
+input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus, select:focus{
+  outline:none !important; border-color:#a5b4fc !important; box-shadow:0 0 0 4px rgba(165,180,252,.25) !important;
+}
+
+/* ===== 3) No clipping for dropdowns/modals ===== */
+html, body{ max-width:100%; overflow-x:hidden; }
+.wrap, .card, .section, table, tbody, tr, td, th{ overflow:visible !important; }
+.dropdown{ z-index:99999 !important; position:absolute; } /* let it float above */
+
+/* ===== 4) Saved Entries buttons — equal sizing, wrap nicely ===== */
+.saved-card{ display:flex !important; flex-wrap:wrap !important; gap:10px !important; align-items:center !important; }
+.saved-card button{ flex:1 1 auto !important; min-width:90px !important; }
+.saved-card .rec{ flex:1 1 100% !important; } /* receipt link can wrap if needed on small screens */
+
+/* ===== 5) Inventory: row expand affordance on mobile ===== */
+@media (max-width:600px){
+  #inventoryTable tbody tr{ cursor:pointer; position:relative; }
+  #inventoryTable tbody tr::after{
+    content:"›"; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    color:#64748b; font-weight:800;
+  }
+  #inventoryTable tbody tr.expanded::after{ content:"▼"; }
+}
+
+/* ===== 6) Normalize Invoice / Due / Grand widths ===== */
+#invoice, #grand, #due{ min-width:180px !important; width:100% !important; }
+
+/* ===== 7) Desktop app width lock for consistency ===== */
+@media (min-width:1280px){
+  .wrap{ max-width:1100px !important; margin-left:auto !important; margin-right:auto !important; }
+}
+</style>
+
+<!-- NRT Unified JS Helpers (safe, optional) -->
+<script id="nrt-unified-js">
+(function(){
+  // 1) Inventory row expand toggle on mobile
+  document.addEventListener('click', function(e){
+    const tr = e.target?.closest && e.target.closest('#inventoryTable tbody tr');
+    if(!tr) return;
+    if (window.matchMedia('(max-width: 600px)').matches){
+      tr.classList.toggle('expanded');
+    }
+  }, true);
+
+  // 2) Ensure any .dropdown opened inside a scroll area stays fully visible by raising its z-index
+  const raiseDropdown = (dd) => { if(dd){ dd.style.zIndex = '99999'; } };
+  document.addEventListener('click', function(e){
+    const dd = e.target?.closest && e.target.closest('.dropdown');
+    raiseDropdown(dd);
+  }, true);
+})();
+</script>
+
+<script id="nrt-contacts-v5">
+(function(){
+  const list = document.getElementById('mcList');
+  const modal = document.getElementById('manageContacts');
+  if(!list || !modal) return;
+
+  function keepSingleOpen(targetRow){
+    const rows = list.querySelectorAll('.rowitem');
+    rows.forEach(r => { if(r !== targetRow) r.classList.remove('is-expanded'); });
+  }
+
+  // Let original click handlers run first, then enforce single-open.
+  list.addEventListener('click', function(e){
+    const row = e.target.closest('.rowitem'); if(!row) return;
+    setTimeout(()=> keepSingleOpen(row), 0);
+  }, true);
+
+  // If user focuses an input in another row, switch expansion.
+  list.addEventListener('focusin', function(e){
+    const row = e.target.closest('.rowitem'); if(!row) return;
+    keepSingleOpen(row);
+  });
+
+  // Outside click / ESC collapses all
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){
+      list.querySelectorAll('.rowitem.is-expanded').forEach(r=>r.classList.remove('is-expanded'));
+    }
+  });
+  document.addEventListener('click', (e)=>{
+    if(!modal.classList.contains('hidden') && !modal.contains(e.target)){
+      list.querySelectorAll('.rowitem.is-expanded').forEach(r=>r.classList.remove('is-expanded'));
+    }
+  });
+})();
+</script>
+
+
+<style id="nrt-20250902-final">
+/* === Global modal lockdown & blur === */
+body.has-modal{ overflow:hidden !important; }
+body.has-modal::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  z-index: 999;
+}
+
+/* === Center both modals perfectly === */
+#manageContacts.manage,
+#catalogSimple.manage{
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%,-50%) !important;
+  margin: 0 !important;
+  width: min(960px, 100vw - 40px) !important;
+  max-height: 88vh !important;
+  overflow: auto !important;
+  z-index: 1000 !important;
+}
+
+/* Keep the card size fixed; scroll within */
+#manageContacts .list,
+#catalogSimple .body{ overflow:auto !important; }
+#manageContacts .list{ max-height: 46vh !important; }
+#catalogSimple .body{ max-height: 60vh !important; }
+
+/* Never let anything overflow the card */
+#manageContacts *, #catalogSimple *{ max-width: 100% !important; box-sizing: border-box; }
+
+/* Manage Contacts: ensure 3 lines when expanded; 4th line shows actions on focus */
+#manageContacts .rowitem.is-expanded{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto auto auto auto !important;
+  gap: 10px !important;
+}
+#manageContacts .rowitem.is-expanded .save,
+#manageContacts .rowitem.is-expanded .del{ display:none !important; }
+#manageContacts .rowitem.is-expanded:focus-within .save,
+#manageContacts .rowitem.is-expanded:focus-within .del{ display:inline-flex !important; }
+
+/* Catalog simple: keep Add button perfectly vertically centered inside the search input */
+#catalogSimple .row:has(#csSearch){
+  position: relative !important;
+  min-height: var(--inp-h, 46px) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#csTypeAdd{
+  position: absolute !important;
+  right: 12px !important;
+  top: calc(var(--inp-h, 46px) / 2) !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+/* Defensive: Hide Add by default; JS will reveal when appropriate */
+#csTypeAdd{ display:none; }
+</style>
+
+
+<!-- Manage Contacts: Embedded Logo + Desktop layout tweak -->
+<style id="mc-final-embed-css">
+  #manageContacts{ max-height:82vh; overflow:hidden; }
+  #manageContacts .list{ max-height:calc(82vh - 160px); overflow:auto; }
+
+  #manageContacts .rowitem{
+    display:grid; gap:8px; align-items:start;
+    grid-template-columns:1.1fr 0.8fr 1.8fr auto auto;
+    border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#fff;
+  }
+  #manageContacts .rowitem input{ width:100%; min-width:0; }
+  #manageContacts .rowitem .save, #manageContacts .rowitem .del{ display:none; padding:10px 16px; border-radius:999px; font-weight:700; height:40px; white-space:nowrap; }
+  #manageContacts .rowitem:focus-within .save, #manageContacts .rowitem:focus-within .del{ display:inline-flex; }
+
+  #manageContacts .rowitem.compact{ grid-template-columns:1fr auto; padding:8px 12px; align-items:center; }
+  #manageContacts .rowitem.compact .chip{ background:#e5e7eb; border-radius:10px; padding:12px; font-weight:600; color:#111827; cursor:pointer; }
+  #manageContacts .rowitem.compact .chip-btn{ width:28px; height:28px; border-radius:6px; background: #f3f4f6 url('data:image/jpeg;base64,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') center/cover no-repeat; cursor:pointer; border:1px solid #e5e7eb; }
+
+  @media (max-width: 820px){
+    #manageContacts .rowitem{ grid-template-columns:1fr 1fr; }
+    #manageContacts .rowitem .name,
+    #manageContacts .rowitem .phone,
+    #manageContacts .rowitem .addr{ grid-column:1 / -1; }
+  }
+  #closeManageContacts{ background:transparent !important; font-size:20px !important; font-weight:700 !important; border:none !important; color:#374151 !important; cursor:pointer; }
+</style>
+
+<script id="mc-final-embed-js">
+(function(){
+  const K = { contacts: 'nrt_contacts' };
+  const read = (k, d) => { try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
+  const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+  let contacts = window.contacts || read(K.contacts, []);
+  let expandedIndex = null;
+  const $ = (sel, el=document) => el.querySelector(sel);
+
+  function saveContacts(){ write(K.contacts, contacts); window.contacts = contacts; }
+
+  window.renderManageContacts = function(filter=''){ 
+    const list = $('#mcList'); if(!list) return;
+    const q = (filter||'').trim().toLowerCase();
+    const view = q ? contacts.filter(c => (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) || (c.address||'').toLowerCase().includes(q)) : contacts;
+    list.innerHTML = '';
+
+    view.forEach((c)=>{
+      const i = contacts.indexOf(c);
+      const row = document.createElement('div');
+      row.className = 'rowitem ' + (expandedIndex === i ? '' : 'compact');
+
+      if(expandedIndex !== i){
+        const chip = Object.assign(document.createElement('div'), {className:'chip', textContent:c.phone||'(no number)'});
+        const logoBtn = document.createElement('div'); logoBtn.className='chip-btn';
+        const expand = ()=>{ expandedIndex = i; renderManageContacts(filter); };
+        chip.addEventListener('click', expand);
+        logoBtn.addEventListener('click', expand);
+        row.append(chip, logoBtn);
+      } else {
+        const inName = Object.assign(document.createElement('input'), {placeholder:'Store Name', value:c.name||'', className:'name'});
+        const inPhone= Object.assign(document.createElement('input'), {placeholder:'01XXXXXXXXX or +88', value:c.phone||'', className:'phone'});
+        const inAddr = Object.assign(document.createElement('input'), {placeholder:'Address', value:c.address||'', className:'addr'});
+        const btnSave= Object.assign(document.createElement('button'), {className:'btn primary save', textContent:'Save'});
+        const btnDel = Object.assign(document.createElement('button'), {className:'btn danger del', textContent:'Delete'});
+        btnSave.addEventListener('click', ()=>{ 
+          const newName = (inName.value||'').trim();
+          const newPhone= (inPhone.value||'').trim();
+          const newAddr = (inAddr.value||'').trim();
+          if(newPhone && contacts.some((cc,j)=> j!==i && normPhone(cc.phone)===normPhone(newPhone))){
+            try{ nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){}
+            return;
+          }
+          contacts[i] = { name:newName, phone:newPhone, address:newAddr };
+          saveContacts();
+          try{ refreshContactDD(); }catch(_){}
+          renderManageContacts(filter);
+        });
+        btnDel.addEventListener('click', async ()=>{ const ok = (typeof nrtConfirm==='function') ? await nrtConfirm('Delete this contact?', { danger:true, okText:'Delete' }) : confirm('Delete this contact?'); if(!ok) return; contacts.splice(i,1); expandedIndex=null; saveContacts(); try{ refreshContactDD(); }catch(_){ } renderManageContacts(filter); });
+        row.append(inName, inPhone, inAddr, btnSave, btnDel);
+      }
+
+      list.appendChild(row);
+    });
+
+    const card = $('#manageContacts');
+    if(card){
+      card._mcCollapse && card.removeEventListener('click', card._mcCollapse, true);
+      const handler = function(e){
+        const expanded = card.querySelector('.rowitem:not(.compact)'); if(!expanded) return;
+        const clickedRow = e.target.closest('.rowitem'); if(!clickedRow){ expandedIndex=null; renderManageContacts(''); }
+      };
+      card.addEventListener('click', handler, true);
+      card._mcCollapse = handler;
+    }
+  };
+
+  const nameI = $('#mcName'), phoneI = $('#mcPhone'), addrI = $('#mcAddr'), addBtn = $('#mcAdd');
+  if(addBtn){
+    addBtn.addEventListener('click', ()=>{ 
+      const name=(nameI.value||'').trim(), phone=(phoneI.value||'').trim(), addr=(addrI.value||'').trim();
+      if(!name && !phone) return;
+      if(phone && contacts.some(c=> normPhone(c.phone)===normPhone(phone))){
+        try{ nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){}
+        return;
+      }
+      contacts.unshift({ name, phone, address: addr, createdAt: Date.now() });
+      saveContacts();
+      try{ refreshContactDD(); }catch(_){}
+      nameI.value=''; phoneI.value=''; addrI.value='';
+      expandedIndex = 0; renderManageContacts('');
+    });
+  }
+
+  const openBtn = $('#openManageContacts'), closeBtn = $('#closeManageContacts');
+  if(openBtn){ openBtn.addEventListener('click', ()=>{ document.body.classList.add('has-modal'); $('#manageContacts').classList.remove('hidden'); expandedIndex=null; renderManageContacts(''); }); }
+  if(closeBtn){ closeBtn.innerHTML='✕'; closeBtn.addEventListener('click', ()=>{ $('#manageContacts').classList.add('hidden'); document.body.classList.remove('has-modal'); expandedIndex=null; }); }
+
+  if($('#manageContacts') && !$('#manageContacts').classList.contains('hidden')){ renderManageContacts(''); }
+})();
+</script>
+
+<!-- Manage Contacts: Collapse Icon Next to Save/Delete -->
+<style id="mc-collapse-css">
+  #manageContacts .rowitem{
+    display:grid; gap:8px; align-items:start;
+    grid-template-columns:1.1fr 0.8fr 1.8fr auto auto 32px;
+    border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#fff;
+  }
+  #manageContacts .rowitem .collapse-btn{
+    width:32px; height:32px; border-radius:8px;
+    background:#f3f4f6 url('data:image/jpeg;base64,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') center/cover no-repeat;
+    border:1px solid #e5e7eb; cursor:pointer;
+  }
+</style>
+
+<script id="mc-collapse-js">
+(function(){
+  const $ = (sel, el=document) => el.querySelector(sel);
+  if (typeof window.renderManageContacts !== 'function') return;
+
+  const prevImpl = window.renderManageContacts;
+  window.renderManageContacts = function(filter=''){
+    prevImpl(filter);
+
+    const card = $('#manageContacts'); if(!card) return;
+    const rows = card.querySelectorAll('.rowitem:not(.compact)');
+    rows.forEach((row)=>{
+      if(row.querySelector('.collapse-btn')) return;
+      const btn = document.createElement('div');
+      btn.className = 'collapse-btn';
+      btn.title = 'Collapse';
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        // Collapse by simulating a click on card (empty area) so the existing handler collapses
+        const evt = new MouseEvent('click', { bubbles:true });
+        const tmp = document.createElement('div');
+        card.appendChild(tmp);
+        tmp.dispatchEvent(evt);
+        tmp.remove();
+      });
+      row.appendChild(btn);
+    });
+  };
+})();
+</script>
+
+<style>
+  /* tiny toast */
+  #nrt-toast {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 10px 14px; border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.2); font: 600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    z-index: 99999;
+  }
+  #nrt-toast.show { opacity: 1; transform: translate(-50%, -6px); }
+</style>
+
+<div id="nrt-toast" role="status" aria-live="polite"></div>
+
+<script>
+
+<style>
+  /* tiny toast */
+  #nrt-toast {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 10px 14px; border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.2); font: 600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    z-index: 99999;
+  }
+  #nrt-toast.show { opacity: 1; transform: translate(-50%, -6px); }
+</style>
+
+<div id="nrt-toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===== Confirm + toast for deletes (robust cancel) ======================= */
+(function () {
+  const toastEl = document.getElementById('nrt-toast');
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+  function inSavedList(el){
+    return el && el.closest('#savedList, #savedEntries, [data-saved-list], .saved-list, .saved-entries');
+  }
+  function isDeleteContact(btn){
+    return btn.classList.contains('del') && btn.closest('#manageContacts');
+  }
+  function isDeleteSaved(btn){
+    return (btn.classList.contains('del') || btn.dataset.action === 'delete-saved') && inSavedList(btn);
+  }
+  function shouldIntercept(btn){
+    return isDeleteContact(btn) || isDeleteSaved(btn);
+  }
+  function confirmMsg(btn){
+    return isDeleteContact(btn) ? 'Delete this contact? This cannot be undone.'
+                                : 'Delete this saved entry? This cannot be undone.';
+  }
+  function showToast(btn){
+    toast(isDeleteContact(btn) ? 'Contact deleted' : 'Entry deleted');
+  }
+
+  // Cancel helper: fully stop event in any phase
+  function cancelEvent(e){
+    try{ e.stopImmediatePropagation(); }catch(_){}
+    try{ e.stopPropagation(); }catch(_){}
+    try{ e.preventDefault(); }catch(_){}
+    // Some frameworks re-dispatch click; mark target as canceled
+    const t = e.target && e.target.closest('button,[role="button"],a,input[type="button"],input[type="submit"]');
+    if (t) t.dataset.nrtCancelled = "1";
+  }
+
+  // Intercept pointerdown/mousedown/click/keydown in capture phase
+  const types = ['pointerdown','mousedown','click','keydown'];
+  types.forEach(type => {
+    document.addEventListener(type, function(e){
+      const btn = (e.target && e.target.closest('button,[role="button"],a,input[type="button"],input[type="submit"]')) || null;
+      if (!btn || !shouldIntercept(btn)) return;
+
+      // For keyboard, only act on Enter/Space activation
+      if (type === 'keydown' && !(e.key === 'Enter' || e.key === ' ')) return;
+
+      // If already canceled earlier, block
+      if (btn.dataset.nrtCancelled === "1") { cancelEvent(e); return; }
+
+      const ok = confirm(confirmMsg(btn));
+      if (!ok){
+        cancelEvent(e);
+        return; // stop: original delete handler won't run
+      }
+
+      // Let original handler proceed; toast shortly after
+      setTimeout(() => showToast(btn), 0);
+    }, true); // capture
+  });
+})();
+</script>
+
+
+<!-- NRT Contact Fixes 2025-09-08: unify Manage Contacts UI & live-add refresh -->
+<script id="nrt-contact-fix-20250908">
+(function(){
+  // Guard to avoid double-inserting
+  if(window.__nrtContactFixApplied) return;
+  window.__nrtContactFixApplied = true;
+
+  // Helpers from page if present
+  const $ = (sel, root=document)=> root.querySelector(sel);
+  const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel));
+
+  // Resolve global contacts array / helpers if they exist
+  const contacts = window.contacts || (window.read ? (window.read(window.K && window.K.contacts, []) || []) : JSON.parse(localStorage.getItem('nrt_contacts')||'[]'));
+  const normPhone = (p)=> String(p||'').replace(/\D/g,'').replace(/^88/,'').slice(-11);
+
+  function saveContacts(){
+    if (typeof window.saveContacts === 'function') { window.saveContacts(); return; }
+    // fallback to localStorage
+    try { localStorage.setItem('nrt_contacts', JSON.stringify(contacts)); }catch(_){}
+  }
+
+  // Unified renderer for Manage Contacts with chip + logo button in collapsed rows
+  function unifiedRenderManageContacts(filter){
+    const list = document.getElementById('mcList'); if(!list) return;
+    const filterStr = (filter||'').toLowerCase().trim();
+    const view = !filterStr ? contacts : contacts.filter(c => 
+      String(c.name||'').toLowerCase().includes(filterStr) ||
+      String(c.phone||'').includes(filterStr) ||
+      String(c.address||'').toLowerCase().includes(filterStr)
+    );
+
+    list.innerHTML = '';
+    let expandedIndex = window.mcExpandedIndex ?? null;
+
+    view.forEach((c)=>{
+      const i = contacts.indexOf(c);
+      const row = document.createElement('div');
+      row.className = 'rowitem ' + (expandedIndex === i ? '' : 'compact');
+
+      if(expandedIndex !== i){
+        const chip = Object.assign(document.createElement('div'), {className:'chip', textContent:c.phone||'(no number)'});
+        const logoBtn = document.createElement('div'); logoBtn.className='chip-btn';
+        const expand = ()=>{ window.mcExpandedIndex = i; unifiedRenderManageContacts(filter); };
+        chip.addEventListener('click', expand);
+        logoBtn.addEventListener('click', expand);
+        row.append(chip, logoBtn);
+      } else {
+        const inName = Object.assign(document.createElement('input'), {placeholder:'Store Name', value:c.name||'', className:'name'});
+        const inPhone= Object.assign(document.createElement('input'), {placeholder:'01XXXXXXXXX or +88', value:c.phone||'', className:'phone'});
+        const inAddr = Object.assign(document.createElement('input'), {placeholder:'Address', value:c.address||'', className:'addr'});
+        const btnSave= Object.assign(document.createElement('button'), {className:'btn primary save', textContent:'Save'});
+        const btnDel = Object.assign(document.createElement('button'), {className:'btn danger del', textContent:'Delete'});
+
+        btnSave.addEventListener('click', ()=>{
+          const newName = (inName.value||'').trim();
+          const newPhone= (inPhone.value||'').trim();
+          const newAddr = (inAddr.value||'').trim();
+          if(newPhone && contacts.some((cc,j)=> j!==i && normPhone(cc.phone)===normPhone(newPhone))){
+            try{ window.nrtIOSNotify && nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){}
+            return;
+          }
+          contacts[i] = { name:newName, phone:newPhone, address:newAddr };
+          saveContacts();
+          try{ window.refreshContactDD && refreshContactDD(); }catch(_){}
+          unifiedRenderManageContacts(filter);
+        });
+
+        btnDel.addEventListener('click', async ()=>{
+          const ok = (typeof window.nrtConfirm==='function') ? await nrtConfirm('Delete this contact?', { danger:true, okText:'Delete' }) : confirm('Delete this contact?');
+          if(!ok) return;
+          contacts.splice(i,1);
+          window.mcExpandedIndex=null;
+          saveContacts();
+          try{ window.refreshContactDD && refreshContactDD(); }catch(_){}
+          unifiedRenderManageContacts(filter);
+        });
+
+        row.append(inName, inPhone, inAddr, btnSave, btnDel);
+      }
+      list.appendChild(row);
+    });
+
+    // Outside-click collapse for the modal
+    const card = document.getElementById('manageContacts');
+    if(card){
+      card._mcCollapse && card.removeEventListener('click', card._mcCollapse, true);
+      const handler = function(e){
+        const expanded = card.querySelector('.rowitem:not(.compact)'); if(!expanded) return;
+        const clickedRow = e.target.closest('.rowitem'); if(!clickedRow){ window.mcExpandedIndex=null; unifiedRenderManageContacts(''); }
+      };
+      card.addEventListener('click', handler, true);
+      card._mcCollapse = handler;
+    }
+  }
+
+  // Patch global reference so existing calls use our renderer
+  try { window.renderManageContacts = unifiedRenderManageContacts; } catch(_) {}
+
+  // Ensure live filter hooks call unified renderer (defensive—attach listeners)
+  const nameI = document.getElementById('mcName'), phoneI = document.getElementById('mcPhone'), addrI = document.getElementById('mcAddr');
+  [nameI,phoneI,addrI].forEach(el=>{ if(!el) return; el.addEventListener('input', ()=> unifiedRenderManageContacts(el.value)); });
+
+  // Fix: Add button should insert and show immediately without reload
+  const addBtn = document.getElementById('mcAdd');
+  if(addBtn){
+    // Capture phase to override any earlier listener
+    addBtn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      const n=(nameI?.value||'').trim(), p=(phoneI?.value||'').trim(), a=(addrI?.value||'').trim();
+      if(!n && !p) return;
+      if(p && contacts.some(c => normPhone(c.phone)===normPhone(p))){
+        try{ window.nrtIOSNotify && nrtIOSNotify({title:'Duplicate number', subtitle:'That phone is already in Contacts', icon:'⚠️', right:''}); }catch(e){}
+        return;
+      }
+      contacts.unshift({ name:n, phone:p, address:a, createdAt: Date.now() });
+      saveContacts();
+      try{ window.refreshContactDD && refreshContactDD(); }catch(_){}
+      if(nameI) nameI.value=''; if(phoneI) phoneI.value=''; if(addrI) addrI.value='';
+      window.mcExpandedIndex = 0;
+      unifiedRenderManageContacts('');
+    }, true);
+  }
+
+  // If modal is open now, re-render using unified UI
+  const mc = document.getElementById('manageContacts');
+  if(mc && !mc.classList.contains('hidden')){
+    unifiedRenderManageContacts('');
+  }
+})();
+</script>
